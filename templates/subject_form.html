@@ -19,6 +19,7 @@
       <div class="card-header"><i class="bi bi-journal-text me-2"></i>{{ t('subjects.form.card_title') }}</div>
       <div class="card-body">
         <form method="post" id="subject-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label">{{ t('subjects.form.name') }} *</label>
             <input type="text" name="name" class="form-control"

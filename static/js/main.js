@@ -361,9 +361,14 @@ async function sendAIMessage() {
   const typing = addMsg(I.aiThinking || '...', 'bot typing');
 
   try {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
     const resp = await fetch('/ai/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
       body: JSON.stringify({ message: text, history: aiHistory.slice(-10) })
     });
     const data  = await resp.json();

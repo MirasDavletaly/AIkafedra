@@ -20,6 +20,7 @@
       <div class="card-body">
         <form method="post" id="workload-form"
               data-supervisor-only='{{ supervisor_only | tojson }}'>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           {% if action == 'add' %}
           <div class="mb-3">

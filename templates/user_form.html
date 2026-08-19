@@ -19,6 +19,7 @@
       <div class="card-header"><i class="bi bi-person-gear me-2"></i>{{ t('users.form.card_title') }}</div>
       <div class="card-body">
         <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           {% if action == 'add' %}
           <div class="mb-3">

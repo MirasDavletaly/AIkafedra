@@ -48,6 +48,7 @@
               </a>
               <form method="post" action="{{ url_for('teacher_delete', tid=t_row['id']) }}"
                     onsubmit="return confirm('{{ t('teachers.confirm_delete', name=t_row['full_name']) }}')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)"
                         title="{{ t('common.delete') }}">
                   <i class="bi bi-trash"></i>

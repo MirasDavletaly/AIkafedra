@@ -54,6 +54,7 @@
       <div class="card-header"><i class="bi bi-lock me-2"></i>{{ t('profile.change_password') }}</div>
       <div class="card-body">
         <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label">{{ t('profile.current_pwd') }} *</label>
             <input type="password" name="old_password" class="form-control"

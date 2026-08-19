@@ -68,6 +68,7 @@
               </a>
               <form method="post" action="{{ url_for('workload_delete', wid=e['id']) }}"
                     onsubmit="return confirm('{{ t('common.confirm_delete') }}')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)">
                   <i class="bi bi-trash"></i>
                 </button>

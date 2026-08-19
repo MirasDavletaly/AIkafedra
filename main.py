@@ -6,12 +6,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from datetime import timedelta
+
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   jsonify, send_file, session)
+                   jsonify, send_file, session, abort)
 from flask_login import (LoginManager, login_user, logout_user,
                          login_required, current_user)
+from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from functools import wraps
 
+import config
 from config import (
     SECRET_KEY,
     DEBUG,
@@ -28,9 +34,12 @@ from config import (
     DEFAULT_RATE,
     LANGUAGES,
     DEFAULT_LANG,
+    LOGIN_RATE_LIMIT,
+    PERMANENT_SESSION_LIFETIME_DAYS,
 )
 from i18n import t as _t, normalize_lang, position_label, role_label
 from database import init_db
+from security import install_security_headers, safe_next_url, client_ip
 import teachers as tch
 import subjects as sub
 import workload as wld
@@ -70,7 +79,48 @@ def _parse_credits_field(form, field: str, max_value: float = 40.0) -> float:
 
 
 app = Flask(__name__)
+
+# --- SECRET_KEY: обязателен в проде ---
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY не задан. Установите переменную окружения SECRET_KEY "
+        "(например, через .env) или запустите с FLASK_DEBUG=1 для локальной разработки."
+    )
 app.secret_key = SECRET_KEY
+
+# --- Cookie / session hardening ---
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=config.SESSION_COOKIE_HTTPONLY,
+    SESSION_COOKIE_SAMESITE=config.SESSION_COOKIE_SAMESITE,
+    SESSION_COOKIE_SECURE=config.SESSION_COOKIE_SECURE,
+    REMEMBER_COOKIE_HTTPONLY=config.REMEMBER_COOKIE_HTTPONLY,
+    REMEMBER_COOKIE_SAMESITE=config.REMEMBER_COOKIE_SAMESITE,
+    REMEMBER_COOKIE_SECURE=config.REMEMBER_COOKIE_SECURE,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=PERMANENT_SESSION_LIFETIME_DAYS),
+    # Ограничим размер тела запроса (защита от простых DoS через огромные тела)
+    MAX_CONTENT_LENGTH=int(16 * 1024 * 1024),  # 16 MiB
+    WTF_CSRF_TIME_LIMIT=int(60 * 60 * 4),      # 4 часа на CSRF-токен
+)
+
+# --- CSRF protection (все POST/PUT/DELETE формы) ---
+csrf = CSRFProtect(app)
+
+# --- Rate limiting (brute-force защита) ---
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
+# --- Security headers на каждый ответ ---
+install_security_headers(app)
+
+
+@app.errorhandler(CSRFError)
+def _handle_csrf_error(e):
+    flash(_t("csrf.invalid", get_current_lang()), "danger")
+    return redirect(request.referrer or url_for("index"))
 
 
 def get_current_lang() -> str:
@@ -160,6 +210,11 @@ def editor_required(f):
 # ВХОД / ВЫХОД
 # ════════════════════════════════════════════════════════════
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit(
+    LOGIN_RATE_LIMIT,
+    methods=["POST"],
+    error_message="rate_limited",
+)
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -167,21 +222,62 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         remember = bool(request.form.get("remember"))
+        ip = client_ip()
+        ua = request.headers.get("User-Agent", "")
         user = au.verify_password(username, password)
+        au.record_login_attempt(username, ip, success=bool(user), user_agent=ua)
         if user:
+            # Защита от session fixation: сбрасываем текущую сессию
+            # (сохраняя только выбранный язык), а затем логиним пользователя.
+            saved_lang = session.get("lang")
+            session.clear()
+            if saved_lang:
+                session["lang"] = saved_lang
             login_user(user, remember=remember)
+            session.permanent = True
             flash(_t("login.welcome", get_current_lang(), name=user.full_name), "success")
-            return redirect(request.args.get("next") or url_for("index"))
+            if user.must_change_password:
+                flash(_t("login.must_change_password", get_current_lang()), "warning")
+                return redirect(url_for("profile"))
+            return redirect(safe_next_url(request.args.get("next"), url_for("index")))
         flash(_t("login.bad_credentials", get_current_lang()), "danger")
     return render_template("login.html")
 
 
-@app.route("/logout")
+@app.errorhandler(429)
+def _handle_rate_limit(e):
+    # Единое сообщение для превышения лимита (в т.ч. /login).
+    if request.path.startswith("/login"):
+        flash(_t("login.rate_limited", get_current_lang()), "danger")
+        return redirect(url_for("login"))
+    return ("Too Many Requests", 429)
+
+
+@app.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    # Полностью очищаем сессию — не оставляем чувствительных данных
+    saved_lang = session.get("lang")
     logout_user()
+    session.clear()
+    if saved_lang:
+        session["lang"] = saved_lang
     flash(_t("login.logged_out", get_current_lang()), "info")
     return redirect(url_for("login"))
+
+
+@app.before_request
+def _enforce_password_change():
+    """Если у пользователя стоит флаг must_change_password — блокируем всё,
+    кроме страницы профиля / logout / static / смены языка."""
+    if not current_user.is_authenticated:
+        return None
+    if not getattr(current_user, "must_change_password", False):
+        return None
+    allowed = {"profile", "logout", "static", "set_language"}
+    if request.endpoint in allowed:
+        return None
+    return redirect(url_for("profile"))
 
 
 # ════════════════════════════════════════════════════════════
@@ -680,13 +776,14 @@ def profile():
             flash(_t("profile.flash.wrong_old", get_current_lang()), "danger")
         elif new_pw != confirm:
             flash(_t("profile.flash.mismatch", get_current_lang()), "danger")
-        elif len(new_pw) < 6:
-            flash(_t("profile.flash.short", get_current_lang()), "danger")
         else:
-            au.update_user(current_user.id, current_user.full_name,
-                           current_user.role, True, new_pw)
-            flash(_t("profile.flash.changed", get_current_lang()), "success")
-            return redirect(url_for("index"))
+            try:
+                au.change_password(current_user.id, new_pw)
+            except ValueError as e:
+                flash(str(e), "danger")
+            else:
+                flash(_t("profile.flash.changed", get_current_lang()), "success")
+                return redirect(url_for("index"))
     return render_template("profile.html")
 
 
@@ -829,6 +926,12 @@ if __name__ == "__main__":
     print(f"  Система управления учебной нагрузкой")
     print(f"{'='*55}")
     print(f"  Откройте браузер: http://127.0.0.1:5000")
-    print(f"  Логин по умолчанию: admin / admin1234")
+    if config.ALLOW_DEFAULT_ADMIN_PASSWORD:
+        print(f"  Логин по умолчанию: admin / admin1234 (DEBUG)")
+    else:
+        print(f"  Пароль администратора см. в логах при первом запуске.")
     print(f"{'='*55}\n")
-    app.run(debug=DEBUG, host="0.0.0.0", port=5000)
+    # host=127.0.0.1 — в DEBUG не биндимся на 0.0.0.0 (безопасность).
+    # Для внешнего доступа используйте gunicorn/uwsgi за reverse-proxy.
+    host = "127.0.0.1" if DEBUG else "0.0.0.0"
+    app.run(debug=DEBUG, host=host, port=5000)

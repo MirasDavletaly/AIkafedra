@@ -15,9 +15,36 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 # --- Основные настройки Flask ---
-# В продакшене задайте SECRET_KEY и FLASK_DEBUG=0 (или false).
-SECRET_KEY = os.environ.get("SECRET_KEY", "kafedra-ai-secret-change-me")
-DEBUG = _env_bool("FLASK_DEBUG", default=True)
+# SECRET_KEY обязателен в проде. Если не задан:
+#   - в DEBUG режиме используется автоматический (для локальной разработки)
+#   - в проде приложение упадёт при старте (см. main.py)
+DEBUG = _env_bool("FLASK_DEBUG", default=False)
+SECRET_KEY = os.environ.get("SECRET_KEY") or (
+    "dev-only-insecure-key-change-me" if DEBUG else None
+)
+
+# --- Cookie / сессии ---
+# HTTPS-only в проде; в DEBUG отключено, чтобы работал HTTP localhost.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+REMEMBER_COOKIE_HTTPONLY = True
+REMEMBER_COOKIE_SAMESITE = "Lax"
+REMEMBER_COOKIE_SECURE = not DEBUG
+# Срок жизни постоянной сессии
+PERMANENT_SESSION_LIFETIME_DAYS = int(
+    os.environ.get("PERMANENT_SESSION_LIFETIME_DAYS", "7")
+)
+
+# --- Безопасность ---
+# Rate-limit: попыток входа на IP (окно 5 минут).
+LOGIN_RATE_LIMIT = os.environ.get("LOGIN_RATE_LIMIT", "5 per 5 minutes")
+# Минимальная длина пароля пользователя
+PASSWORD_MIN_LENGTH = int(os.environ.get("PASSWORD_MIN_LENGTH", "10"))
+# Разрешить создание дефолтного пароля admin (только для DEBUG)
+ALLOW_DEFAULT_ADMIN_PASSWORD = _env_bool(
+    "ALLOW_DEFAULT_ADMIN_PASSWORD", default=DEBUG
+)
 
 # --- База данных ---
 # Используем SQLite — файл создаётся автоматически

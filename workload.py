@@ -1,5 +1,5 @@
 from database import get_connection
-from utils import calculate_total_hours
+from utils import calculate_total_credits
 
 
 def get_all_workload() -> list:
@@ -11,10 +11,10 @@ def get_all_workload() -> list:
             t.position,
             s.name           AS subject_name,
             s.code           AS subject_code,
-            w.lecture_hours,
-            w.practice_hours,
-            w.lab_hours,
-            (w.lecture_hours + w.practice_hours + w.lab_hours) AS total_hours,
+            w.lecture_credits,
+            w.practice_credits,
+            w.lab_credits,
+            (w.lecture_credits + w.practice_credits + w.lab_credits) AS total_credits,
             w.semester,
             w.academic_year,
             w.teacher_id,
@@ -35,10 +35,10 @@ def get_workload_by_teacher(teacher_id: int) -> list:
             w.id,
             s.name           AS subject_name,
             s.code           AS subject_code,
-            w.lecture_hours,
-            w.practice_hours,
-            w.lab_hours,
-            (w.lecture_hours + w.practice_hours + w.lab_hours) AS total_hours,
+            w.lecture_credits,
+            w.practice_credits,
+            w.lab_credits,
+            (w.lecture_credits + w.practice_credits + w.lab_credits) AS total_credits,
             w.semester,
             w.academic_year
         FROM workload w
@@ -60,10 +60,9 @@ def get_workload_entry(workload_id: int):
 
 
 def assign_workload(teacher_id: int, subject_id: int,
-                    lecture_hours: int, practice_hours: int, lab_hours: int,
+                    lecture_credits: float, practice_credits: float, lab_credits: float,
                     semester: int, academic_year: str) -> int:
     conn = get_connection()
-    # Проверяем, существует ли уже такая связка
     existing = conn.execute("""
         SELECT id FROM workload
         WHERE teacher_id = ? AND subject_id = ? AND semester = ? AND academic_year = ?
@@ -72,18 +71,17 @@ def assign_workload(teacher_id: int, subject_id: int,
     if existing:
         conn.execute("""
             UPDATE workload
-            SET lecture_hours = ?, practice_hours = ?, lab_hours = ?
+            SET lecture_credits = ?, practice_credits = ?, lab_credits = ?
             WHERE id = ?
-        """, (lecture_hours, practice_hours, lab_hours, existing["id"]))
+        """, (lecture_credits, practice_credits, lab_credits, existing["id"]))
         conn.commit()
         row_id = existing["id"]
     else:
-        # Создаём новую запись
         cur = conn.execute("""
             INSERT INTO workload
-                (teacher_id, subject_id, lecture_hours, practice_hours, lab_hours, semester, academic_year)
+                (teacher_id, subject_id, lecture_credits, practice_credits, lab_credits, semester, academic_year)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (teacher_id, subject_id, lecture_hours, practice_hours, lab_hours, semester, academic_year))
+        """, (teacher_id, subject_id, lecture_credits, practice_credits, lab_credits, semester, academic_year))
         conn.commit()
         row_id = cur.lastrowid
 
@@ -91,16 +89,16 @@ def assign_workload(teacher_id: int, subject_id: int,
     return row_id
 
 
-def update_workload(workload_id: int, lecture_hours: int,
-                    practice_hours: int, lab_hours: int,
+def update_workload(workload_id: int, lecture_credits: float,
+                    practice_credits: float, lab_credits: float,
                     semester: int, academic_year: str) -> bool:
     conn = get_connection()
     cur = conn.execute("""
         UPDATE workload
-        SET lecture_hours = ?, practice_hours = ?, lab_hours = ?,
+        SET lecture_credits = ?, practice_credits = ?, lab_credits = ?,
             semester = ?, academic_year = ?
         WHERE id = ?
-    """, (lecture_hours, practice_hours, lab_hours, semester, academic_year, workload_id))
+    """, (lecture_credits, practice_credits, lab_credits, semester, academic_year, workload_id))
     conn.commit()
     updated = cur.rowcount > 0
     conn.close()
@@ -116,27 +114,32 @@ def delete_workload(workload_id: int) -> bool:
     return deleted
 
 
-def get_teacher_total_hours(teacher_id: int) -> int:
+def get_teacher_total_credits(teacher_id: int) -> float:
     conn = get_connection()
     row = conn.execute("""
-        SELECT COALESCE(SUM(lecture_hours + practice_hours + lab_hours), 0) AS total
+        SELECT COALESCE(SUM(lecture_credits + practice_credits + lab_credits), 0) AS total
         FROM workload
         WHERE teacher_id = ?
     """, (teacher_id,)).fetchone()
     conn.close()
-    return row["total"] if row else 0
+    return round(row["total"], 2) if row else 0.0
 
 
 def get_workload_stats() -> dict:
     conn = get_connection()
     row = conn.execute("""
         SELECT
-            COUNT(*)                         AS entries,
-            COALESCE(SUM(lecture_hours), 0)  AS total_lecture,
-            COALESCE(SUM(practice_hours), 0) AS total_practice,
-            COALESCE(SUM(lab_hours), 0)      AS total_lab,
-            COUNT(DISTINCT teacher_id)       AS teachers_with_load
+            COUNT(*)                            AS entries,
+            COALESCE(SUM(lecture_credits), 0)   AS total_lecture,
+            COALESCE(SUM(practice_credits), 0)  AS total_practice,
+            COALESCE(SUM(lab_credits), 0)       AS total_lab,
+            COUNT(DISTINCT teacher_id)          AS teachers_with_load
         FROM workload
     """).fetchone()
     conn.close()
-    return dict(row) if row else {}
+    if not row:
+        return {}
+    d = dict(row)
+    for k in ("total_lecture", "total_practice", "total_lab"):
+        d[k] = round(d[k] or 0, 2)
+    return d

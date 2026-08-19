@@ -19,12 +19,13 @@ def get_teacher_by_id(teacher_id: int):
     return row
 
 
-def add_teacher(full_name: str, position: str, max_workload: int, email: str = "") -> int:
+def add_teacher(full_name: str, position: str, max_workload: float,
+                email: str = "", rate: float = 1.0) -> int:
     conn = get_connection()
     cur = conn.execute(
-        """INSERT INTO teachers (full_name, position, max_workload, email)
-           VALUES (?, ?, ?, ?)""",
-        (full_name.strip(), position, max_workload, email.strip())
+        """INSERT INTO teachers (full_name, position, rate, max_workload, email)
+           VALUES (?, ?, ?, ?, ?)""",
+        (full_name.strip(), position, float(rate), float(max_workload), email.strip())
     )
     conn.commit()
     teacher_id = cur.lastrowid
@@ -33,13 +34,14 @@ def add_teacher(full_name: str, position: str, max_workload: int, email: str = "
 
 
 def update_teacher(teacher_id: int, full_name: str, position: str,
-                   max_workload: int, email: str = "") -> bool:
+                   max_workload: float, email: str = "", rate: float = 1.0) -> bool:
     conn = get_connection()
     cur = conn.execute(
         """UPDATE teachers
-           SET full_name = ?, position = ?, max_workload = ?, email = ?
+           SET full_name = ?, position = ?, rate = ?, max_workload = ?, email = ?
            WHERE id = ?""",
-        (full_name.strip(), position, max_workload, email.strip(), teacher_id)
+        (full_name.strip(), position, float(rate), float(max_workload),
+         email.strip(), teacher_id)
     )
     conn.commit()
     updated = cur.rowcount > 0
@@ -63,9 +65,10 @@ def get_teachers_with_workload_summary() -> list:
             t.id,
             t.full_name,
             t.position,
+            t.rate,
             t.max_workload,
             t.email,
-            COALESCE(SUM(w.lecture_hours + w.practice_hours + w.lab_hours), 0) AS total_hours
+            COALESCE(ROUND(SUM(w.lecture_credits + w.practice_credits + w.lab_credits), 2), 0) AS total_credits
         FROM teachers t
         LEFT JOIN workload w ON w.teacher_id = t.id
         GROUP BY t.id

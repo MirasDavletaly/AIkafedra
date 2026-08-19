@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Редактировать' if action == 'edit' else 'Назначить' }} нагрузку{% endblock %}
+{% block title %}{{ t('workload.form.title_edit') if action == 'edit' else t('workload.form.title_add') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-title">
-    {{ 'Редактировать нагрузку' if action == 'edit' else 'Назначить нагрузку' }}
+    {{ t('workload.form.title_edit') if action == 'edit' else t('workload.form.title_add') }}
   </div>
   <div class="page-subtitle">
     <a href="{{ url_for('workload_list') }}" style="color:var(--clr-muted);text-decoration:none">
-      <i class="bi bi-arrow-left me-1"></i>Назад к списку
+      <i class="bi bi-arrow-left me-1"></i>{{ t('common.back_to_list') }}
     </a>
   </div>
 </div>
@@ -16,84 +16,98 @@
 <div class="row">
   <div class="col-md-7">
     <div class="card">
-      <div class="card-header"><i class="bi bi-bar-chart-line me-2"></i>Данные нагрузки</div>
+      <div class="card-header"><i class="bi bi-bar-chart-line me-2"></i>{{ t('workload.title') }}</div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" id="workload-form"
+              data-supervisor-only='{{ supervisor_only | tojson }}'>
 
           {% if action == 'add' %}
           <div class="mb-3">
-            <label class="form-label">Преподаватель *</label>
-            <select name="teacher_id" class="form-select" required>
-              <option value="">— Выберите преподавателя —</option>
-              {% for t in teachers %}
-              <option value="{{ t['id'] }}">{{ t['full_name'] }} ({{ t['position'] }})</option>
+            <label class="form-label">{{ t('workload.form.teacher') }} *</label>
+            <select name="teacher_id" id="teacher-select" class="form-select" required>
+              <option value="">{{ t('workload.form.choose_teacher') }}</option>
+              {% for t_row in teachers %}
+              <option value="{{ t_row['id'] }}"
+                      data-position="{{ t_row['position'] }}">
+                {{ t_row['full_name'] }} ({{ position_label(t_row['position']) }})
+              </option>
               {% endfor %}
             </select>
+            <div id="teacher-supervisor-warning"
+                 class="form-text"
+                 style="color:var(--clr-yellow);font-size:12px;margin-top:6px;display:none">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              {{ t('workload.researcher_warning') }}
+            </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Дисциплина *</label>
+            <label class="form-label">{{ t('workload.form.subject') }} *</label>
             <select name="subject_id" class="form-select" required>
-              <option value="">— Выберите дисциплину —</option>
+              <option value="">{{ t('workload.form.choose_subject') }}</option>
               {% for s in subjects %}
               <option value="{{ s['id'] }}">
                 {{ s['name'] }}{% if s['code'] %} ({{ s['code'] }}){% endif %}
+                — {{ s['credits']|default(0) }} {{ t('common.credits_short') }}
               </option>
               {% endfor %}
             </select>
           </div>
           {% endif %}
 
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-3" id="credits-block">
             <div class="col-md-4">
               <label class="form-label">
-                <i class="bi bi-easel" style="color:var(--clr-accent)"></i> Лекции (ч)
+                <i class="bi bi-easel" style="color:var(--clr-accent)"></i> {{ t('workload.form.lecture') }}
               </label>
-              <input type="number" name="lecture_hours" class="form-control"
-                     min="0" value="{{ entry.lecture_hours if entry else 0 }}">
+              <input type="number" name="lecture_credits" class="form-control"
+                     min="0" max="40" step="0.5"
+                     value="{{ entry.lecture_credits if entry else 0 }}">
             </div>
             <div class="col-md-4">
               <label class="form-label">
-                <i class="bi bi-clipboard" style="color:var(--clr-accent2)"></i> Практика (ч)
+                <i class="bi bi-clipboard" style="color:var(--clr-accent2)"></i> {{ t('workload.form.practice') }}
               </label>
-              <input type="number" name="practice_hours" class="form-control"
-                     min="0" value="{{ entry.practice_hours if entry else 0 }}">
+              <input type="number" name="practice_credits" class="form-control"
+                     min="0" max="40" step="0.5"
+                     value="{{ entry.practice_credits if entry else 0 }}">
             </div>
             <div class="col-md-4">
               <label class="form-label">
-                <i class="bi bi-cpu" style="color:var(--clr-green)"></i> Лаборат. (ч)
+                <i class="bi bi-cpu" style="color:var(--clr-green)"></i> {{ t('workload.form.lab') }}
               </label>
-              <input type="number" name="lab_hours" class="form-control"
-                     min="0" value="{{ entry.lab_hours if entry else 0 }}">
+              <input type="number" name="lab_credits" class="form-control"
+                     min="0" max="40" step="0.5"
+                     value="{{ entry.lab_credits if entry else 0 }}">
             </div>
           </div>
 
           <div class="row g-3 mb-4">
             <div class="col-md-4">
-              <label class="form-label">Семестр *</label>
+              <label class="form-label">{{ t('common.semester') }} *</label>
               <select name="semester" class="form-select">
                 {% for s in semesters %}
                 <option value="{{ s }}"
                   {% if entry and entry.semester == s %}selected{% endif %}>
-                  {{ s }} семестр
+                  {{ s }} {{ t('common.semester_lower') }}
                 </option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-8">
-              <label class="form-label">Учебный год *</label>
+              <label class="form-label">{{ t('common.academic_year') }} *</label>
               <input type="text" name="academic_year" class="form-control"
-                     placeholder="2024-2025"
-                     value="{{ entry.academic_year if entry else '2024-2025' }}" required>
+                     placeholder="{{ academic_year_default }}"
+                     value="{{ entry.academic_year if entry else academic_year_default }}" required>
             </div>
           </div>
 
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-lg me-1"></i>
-              {{ 'Сохранить' if action == 'edit' else 'Назначить' }}
+              {{ t('common.save') if action == 'edit' else t('workload.form.assign') }}
             </button>
-            <a href="{{ url_for('workload_list') }}" class="btn btn-outline-secondary">Отмена</a>
+            <a href="{{ url_for('workload_list') }}" class="btn btn-outline-secondary">{{ t('common.cancel') }}</a>
           </div>
         </form>
       </div>
@@ -102,20 +116,54 @@
 
   <div class="col-md-5">
     <div class="card">
-      <div class="card-header"><i class="bi bi-lightbulb me-2"></i>Подсказка</div>
+      <div class="card-header"><i class="bi bi-lightbulb me-2"></i>{{ t('common.summary') }}</div>
       <div class="card-body" style="font-size:13px;color:var(--clr-muted);line-height:1.7">
-        <p>Укажите количество часов каждого типа для данной дисциплины в выбранном семестре.</p>
+        <p>{{ t('workload.form.summary_intro') }}</p>
+        <p style="color:var(--clr-text)">{{ t('workload.form.summary_norm', hours=hours_per_credit|int)|safe }}</p>
         <hr>
         <p><i class="bi bi-easel" style="color:var(--clr-accent)"></i>
-           <strong style="color:var(--clr-text)">Лекции</strong> — теоретические занятия</p>
+           <strong style="color:var(--clr-text)">{{ t('workload.col.lecture') }}</strong> — {{ t('workload.form.summary_lecture') }}</p>
         <p><i class="bi bi-clipboard" style="color:var(--clr-accent2)"></i>
-           <strong style="color:var(--clr-text)">Практика</strong> — семинары, задачи</p>
+           <strong style="color:var(--clr-text)">{{ t('workload.col.practice') }}</strong> — {{ t('workload.form.summary_practice') }}</p>
         <p><i class="bi bi-cpu" style="color:var(--clr-green)"></i>
-           <strong style="color:var(--clr-text)">Лабораторные</strong> — практические работы</p>
+           <strong style="color:var(--clr-text)">{{ t('workload.col.lab') }}</strong> — {{ t('workload.form.summary_lab') }}</p>
         <hr>
-        <p>Если такая запись уже существует — часы будут обновлены.</p>
+        <p style="color:var(--clr-yellow)">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          {{ t('workload.researcher_warning') }}
+        </p>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  const form = document.getElementById('workload-form');
+  if (!form) return;
+  let supervisorOnly = [];
+  try { supervisorOnly = JSON.parse(form.dataset.supervisorOnly || '[]'); }
+  catch (e) { supervisorOnly = []; }
+  const sel  = document.getElementById('teacher-select');
+  const warn = document.getElementById('teacher-supervisor-warning');
+  const block = document.getElementById('credits-block');
+  if (!sel) return;
+
+  function refresh() {
+    const opt = sel.options[sel.selectedIndex];
+    const pos = opt ? (opt.dataset.position || '') : '';
+    const blocked = supervisorOnly.indexOf(pos) >= 0;
+    if (warn)  warn.style.display  = blocked ? 'block' : 'none';
+    if (block) {
+      block.querySelectorAll('input[type="number"]').forEach(function(inp) {
+        inp.disabled = blocked;
+        if (blocked) inp.value = 0;
+      });
+      block.style.opacity = blocked ? '0.4' : '1';
+    }
+  }
+  sel.addEventListener('change', refresh);
+  refresh();
+})();
+</script>
 {% endblock %}

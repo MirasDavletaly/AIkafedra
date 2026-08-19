@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 .env
 *.sqlite
+
+# IDE
+.idea/
+.vscode/
+
+# Дампы и временные выгрузки данных
+_*.txt
+_*.json
+_pdf_pages/
+data/
+
+# Локальные PDF (данные кафедры, не публиковать)
+*.pdf

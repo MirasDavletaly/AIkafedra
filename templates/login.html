@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ current_lang or 'ru' }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход — {{ dept }}</title>
+  <title>{{ t('login.title') }} — {{ dept }}</title>
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon_32.png') }}">
@@ -18,8 +18,19 @@
 <div class="login-wrapper">
   <div class="login-header">
     <div class="login-badge">КАФ / ИИ</div>
-    <div class="login-title">Вход в систему</div>
+    <div class="login-title">{{ t('login.title') }}</div>
     <div class="login-subtitle">{{ dept }}</div>
+    <p class="login-about" style="font-size:12px;color:var(--clr-muted);margin-top:12px;line-height:1.5">
+      {{ project_theme }}
+    </p>
+    <!-- Переключатель языка -->
+    <div class="lang-switcher" style="padding:8px 0 0;justify-content:center;gap:8px">
+      {% for code, name in languages.items() %}
+      <a href="{{ url_for('set_language', lang=code) }}"
+         class="lang-btn {% if current_lang == code %}active{% endif %}"
+         style="flex:0 0 auto;min-width:48px">{{ code|upper }}</a>
+      {% endfor %}
+    </div>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -36,20 +47,20 @@
   <div class="login-card">
     <form method="post" autocomplete="off">
       <div class="mb-3">
-        <label class="form-label">Логин</label>
+        <label class="form-label">{{ t('login.username') }}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-person"></i></span>
           <input type="text" name="username" class="form-control"
-                 placeholder="Введите логин" required autofocus>
+                 placeholder="{{ t('login.username') }}" required autofocus>
         </div>
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Пароль</label>
+        <label class="form-label">{{ t('login.password') }}</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-lock"></i></span>
           <input type="password" name="password" id="login-pwd" class="form-control"
-                 placeholder="Введите пароль" required>
+                 placeholder="{{ t('login.password') }}" required>
           <button type="button" class="input-group-text" id="login-eye-btn"
                   style="cursor:pointer">
             <i class="bi bi-eye" id="login-eye"></i>
@@ -60,12 +71,12 @@
       <div class="mb-3">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="remember" id="remember">
-          <label class="form-check-label" for="remember">Запомнить меня</label>
+          <label class="form-check-label" for="remember">{{ t('login.remember') }}</label>
         </div>
       </div>
 
       <button type="submit" class="btn-login">
-        <i class="bi bi-box-arrow-in-right me-2"></i>Войти
+        <i class="bi bi-box-arrow-in-right me-2"></i>{{ t('login.submit') }}
       </button>
     </form>
   </div>

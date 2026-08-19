@@ -1,50 +1,75 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Редактировать' if action == 'edit' else 'Добавить' }} дисциплину{% endblock %}
+{% block title %}{{ t('subjects.form.title_edit') if action == 'edit' else t('subjects.form.title_add') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-title">
-    {{ 'Редактировать дисциплину' if action == 'edit' else 'Новая дисциплина' }}
+    {{ t('subjects.form.title_edit') if action == 'edit' else t('subjects.form.title_add') }}
   </div>
   <div class="page-subtitle">
     <a href="{{ url_for('subjects_list') }}" style="color:var(--clr-muted);text-decoration:none">
-      <i class="bi bi-arrow-left me-1"></i>Назад к списку
+      <i class="bi bi-arrow-left me-1"></i>{{ t('common.back_to_list') }}
     </a>
   </div>
 </div>
 
 <div class="row">
-  <div class="col-md-6">
+  <div class="col-lg-7">
     <div class="card">
-      <div class="card-header"><i class="bi bi-journal-text me-2"></i>Данные дисциплины</div>
+      <div class="card-header"><i class="bi bi-journal-text me-2"></i>{{ t('subjects.form.card_title') }}</div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" id="subject-form">
           <div class="mb-3">
-            <label class="form-label">Название дисциплины *</label>
+            <label class="form-label">{{ t('subjects.form.name') }} *</label>
             <input type="text" name="name" class="form-control"
-                   placeholder="Машинное обучение"
+                   placeholder="{{ t('subjects.form.name_placeholder') }}"
                    value="{{ subject.name if subject else '' }}" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Код дисциплины</label>
+            <label class="form-label">{{ t('subjects.form.code') }}</label>
             <input type="text" name="code" class="form-control"
-                   placeholder="CS401"
+                   placeholder="{{ t('subjects.form.code_placeholder') }}"
                    value="{{ subject.code if subject else '' }}">
           </div>
 
+          <div class="mb-3">
+            <label class="form-label">{{ t('subjects.form.credits') }} *</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+              <input type="number" name="credits" id="subject-credits" class="form-control subject-credits-input"
+                     data-hours-per-credit="{{ hours_per_credit|int }}" min="0" max="40" step="0.5"
+                     value="{{ subject['credits']|default(0) if subject else 0 }}"
+                     required>
+              <span class="text-muted small">{{ t('subjects.form.credits_help') }}</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="small text-muted align-self-center me-1">{{ t('subjects.form.quick') }}</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary js-credit-preset" data-credit="1.5">1,5</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary js-credit-preset" data-credit="3">3</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary js-credit-preset" data-credit="5">5</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary js-credit-preset" data-credit="6">6</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary js-credit-preset" data-credit="0">0</button>
+            </div>
+            <div class="hint-box"
+                 data-hours-hint="{{ t('subjects.hours.hint', hp='__HP__', h='__H__') }}">
+              <strong>{{ t('subjects.form.hint_title') }}</strong>
+              {{ t('subjects.form.hint_body', hours=hours_per_credit|int)|safe }}
+              <div class="mt-2" id="credits-hours-hint" style="font-size:12px;color:var(--clr-accent)"></div>
+            </div>
+          </div>
+
           <div class="mb-4">
-            <label class="form-label">Описание</label>
+            <label class="form-label">{{ t('subjects.form.description') }}</label>
             <textarea name="description" class="form-control" rows="3"
-                      placeholder="Краткое описание дисциплины...">{{ subject.description if subject else '' }}</textarea>
+                      placeholder="{{ t('subjects.form.description_placeholder') }}">{{ subject.description if subject else '' }}</textarea>
           </div>
 
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-lg me-1"></i>
-              {{ 'Сохранить' if action == 'edit' else 'Добавить дисциплину' }}
+              {{ t('common.save') if action == 'edit' else t('subjects.form.save_add') }}
             </button>
-            <a href="{{ url_for('subjects_list') }}" class="btn btn-outline-secondary">Отмена</a>
+            <a href="{{ url_for('subjects_list') }}" class="btn btn-outline-secondary">{{ t('common.cancel') }}</a>
           </div>
         </form>
       </div>

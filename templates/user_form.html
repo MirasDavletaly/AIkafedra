@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Редактировать' if action == 'edit' else 'Новый' }} пользователь{% endblock %}
+{% block title %}{{ t('users.form.title_edit') if action == 'edit' else t('users.form.title_add') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-title">
-    {{ 'Редактировать пользователя' if action == 'edit' else 'Новый пользователь' }}
+    {{ t('users.form.title_edit') if action == 'edit' else t('users.form.title_add') }}
   </div>
   <div class="page-subtitle">
     <a href="{{ url_for('users_list') }}" style="color:var(--clr-muted);text-decoration:none">
-      <i class="bi bi-arrow-left me-1"></i>Назад к списку
+      <i class="bi bi-arrow-left me-1"></i>{{ t('common.back_to_list') }}
     </a>
   </div>
 </div>
@@ -16,42 +16,42 @@
 <div class="row">
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header"><i class="bi bi-person-gear me-2"></i>Данные пользователя</div>
+      <div class="card-header"><i class="bi bi-person-gear me-2"></i>{{ t('users.form.card_title') }}</div>
       <div class="card-body">
         <form method="post">
 
           {% if action == 'add' %}
           <div class="mb-3">
-            <label class="form-label">Логин *</label>
+            <label class="form-label">{{ t('users.form.username') }} *</label>
             <input type="text" name="username" class="form-control"
-                   placeholder="ivanov" required
+                   placeholder="{{ t('users.form.username_placeholder') }}" required
                    pattern="[a-zA-Z0-9_\-]+"
-                   title="Только латинские буквы, цифры, _ и -">
+                   title="{{ t('users.form.username_help') }}">
             <div class="form-text" style="color:var(--clr-muted);font-size:11px;margin-top:4px">
-              Только латинские буквы, цифры, _ и -. Регистр не важен.
+              {{ t('users.form.username_help') }}
             </div>
           </div>
           {% else %}
           <div class="mb-3">
-            <label class="form-label">Логин</label>
+            <label class="form-label">{{ t('users.form.username') }}</label>
             <input type="text" class="form-control" value="{{ user.username }}" disabled>
           </div>
           {% endif %}
 
           <div class="mb-3">
-            <label class="form-label">Полное имя *</label>
+            <label class="form-label">{{ t('users.form.full_name') }} *</label>
             <input type="text" name="full_name" class="form-control"
-                   placeholder="Иванов Иван Иванович"
+                   placeholder="{{ t('teachers.form.full_name_placeholder') }}"
                    value="{{ user.full_name if user else '' }}" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Роль *</label>
+            <label class="form-label">{{ t('users.form.role') }} *</label>
             <select name="role" class="form-select">
-              {% for key, label in roles %}
+              {% for key, _label in roles %}
               <option value="{{ key }}"
                 {% if user and user.role == key %}selected{% endif %}>
-                {{ label }}
+                {{ role_label(key) }} — {{ t('role.' ~ key ~ '.desc') }}
               </option>
               {% endfor %}
             </select>
@@ -59,11 +59,11 @@
 
           {% if action == 'add' %}
           <div class="mb-3">
-            <label class="form-label">Пароль * (минимум 6 символов)</label>
+            <label class="form-label">{{ t('users.form.password') }} *</label>
             <div class="input-group">
               <input type="password" name="password" id="pwd" class="form-control"
-                     placeholder="Введите пароль" required minlength="6">
-              <button type="button" class="btn btn-outline-secondary" onclick="togglePwd()">
+                     placeholder="{{ t('users.form.password_placeholder') }}" required minlength="6">
+              <button type="button" class="btn btn-outline-secondary js-toggle-user-pwd">
                 <i class="bi bi-eye" id="eye-ico"></i>
               </button>
             </div>
@@ -71,11 +71,11 @@
           {% else %}
           <!-- Редактирование: пароль необязателен -->
           <div class="mb-3">
-            <label class="form-label">Новый пароль <span style="color:var(--clr-muted)">(оставьте пустым, чтобы не менять)</span></label>
+            <label class="form-label">{{ t('users.form.new_password') }} <span style="color:var(--clr-muted)">{{ t('users.form.new_password_note') }}</span></label>
             <div class="input-group">
               <input type="password" name="new_password" id="pwd" class="form-control"
-                     placeholder="Новый пароль (мин. 6 символов)" minlength="6">
-              <button type="button" class="btn btn-outline-secondary" onclick="togglePwd()">
+                     placeholder="{{ t('users.form.new_password_placeholder') }}" minlength="6">
+              <button type="button" class="btn btn-outline-secondary js-toggle-user-pwd">
                 <i class="bi bi-eye" id="eye-ico"></i>
               </button>
             </div>
@@ -87,7 +87,7 @@
                      {% if user.is_active %}checked{% endif %}>
               <label class="form-check-label" for="is_active"
                      style="font-size:13px;color:var(--clr-text)">
-                Пользователь активен
+                {{ t('users.form.is_active') }}
               </label>
             </div>
           </div>
@@ -96,9 +96,9 @@
           <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-lg me-1"></i>
-              {{ 'Сохранить' if action == 'edit' else 'Создать пользователя' }}
+              {{ t('common.save') if action == 'edit' else t('users.form.save_add') }}
             </button>
-            <a href="{{ url_for('users_list') }}" class="btn btn-outline-secondary">Отмена</a>
+            <a href="{{ url_for('users_list') }}" class="btn btn-outline-secondary">{{ t('common.cancel') }}</a>
           </div>
         </form>
       </div>
@@ -107,45 +107,34 @@
 
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header"><i class="bi bi-shield me-2"></i>Уровни доступа</div>
+      <div class="card-header"><i class="bi bi-shield me-2"></i>{{ t('users.access.title') }}</div>
       <div class="card-body" style="font-size:13px;line-height:1.8">
         <div style="margin-bottom:14px">
           <span style="color:var(--clr-red);font-weight:600">
-            <i class="bi bi-shield-fill"></i> Администратор
+            <i class="bi bi-shield-fill"></i> {{ t('role.admin') }}
           </span><br>
           <span style="color:var(--clr-muted)">
-            Полный доступ: управление пользователями, редактирование всех данных, просмотр отчётов.
+            {{ t('role.admin.full') }}
           </span>
         </div>
         <div style="margin-bottom:14px">
           <span style="color:var(--clr-accent);font-weight:600">
-            <i class="bi bi-pencil-square"></i> Редактор
+            <i class="bi bi-pencil-square"></i> {{ t('role.editor') }}
           </span><br>
           <span style="color:var(--clr-muted)">
-            Добавление и редактирование преподавателей, дисциплин и нагрузки. Просмотр отчётов. Без управления пользователями.
+            {{ t('role.editor.full') }}
           </span>
         </div>
         <div>
           <span style="color:var(--clr-green);font-weight:600">
-            <i class="bi bi-eye"></i> Наблюдатель
+            <i class="bi bi-eye"></i> {{ t('role.viewer') }}
           </span><br>
           <span style="color:var(--clr-muted)">
-            Только просмотр: таблицы преподавателей, дисциплин, нагрузки и отчётов.
+            {{ t('role.viewer.full') }}
           </span>
         </div>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-function togglePwd() {
-  const inp = document.getElementById('pwd');
-  const ico = document.getElementById('eye-ico');
-  if (inp.type === 'password') { inp.type = 'text'; ico.className = 'bi bi-eye-slash'; }
-  else { inp.type = 'password'; ico.className = 'bi bi-eye'; }
-}
-</script>
 {% endblock %}

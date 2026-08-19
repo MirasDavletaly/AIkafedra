@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Отчёты{% endblock %}
+{% block title %}{{ t('nav.reports') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="page-title">Отчёты и аналитика</div>
+  <div class="page-title">{{ t('reports.title') }}</div>
   <div class="page-subtitle">{{ dept }}</div>
 </div>
 
 <!-- Фильтр по семестру -->
 <div class="card mb-4">
   <div class="card-body d-flex align-items-center gap-3">
-    <span style="font-size:13px;color:var(--clr-muted)">Фильтр по семестру:</span>
+    <span style="font-size:13px;color:var(--clr-muted)">{{ t('reports.filter_sem') }}</span>
     <form method="get" class="d-flex gap-2">
       {% for s in semesters %}
       <button type="submit" name="semester" value="{{ s }}"
               class="btn btn-sm {% if selected_sem == s %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-        {{ s }} семестр
+        {{ t('reports.sem_btn', n=s) }}
       </button>
       {% endfor %}
-      <a href="{{ url_for('reports_page') }}" class="btn btn-sm btn-outline-secondary">Все</a>
+      <a href="{{ url_for('reports_page') }}" class="btn btn-sm btn-outline-secondary">{{ t('common.all') }}</a>
     </form>
   </div>
 </div>
@@ -27,23 +27,30 @@
 {% if selected_sem and semester_data %}
 <div class="card mb-4">
   <div class="card-header">
-    <i class="bi bi-calendar3 me-2"></i>Нагрузка: {{ selected_sem }} семестр
+    <i class="bi bi-calendar3 me-2"></i>{{ t('reports.workload_sem', n=selected_sem) }}
   </div>
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead>
-        <tr><th>Преподаватель</th><th>Дисциплина</th><th>Лекции</th><th>Практика</th><th>Лаб.</th><th>Итого</th></tr>
+        <tr>
+          <th>{{ t('table.teacher') }}</th>
+          <th>{{ t('workload.form.subject') }}</th>
+          <th>{{ t('workload.col.lecture') }}</th>
+          <th>{{ t('workload.col.practice') }}</th>
+          <th>{{ t('workload.col.lab') }}</th>
+          <th>{{ t('workload.col.total') }}</th>
+        </tr>
       </thead>
       <tbody>
         {% for r in semester_data %}
         <tr>
           <td><strong>{{ r.teacher_name }}</strong><br>
-            <small style="color:var(--clr-muted)">{{ r.position }}</small></td>
+            <small style="color:var(--clr-muted)">{{ position_label(r.position) }}</small></td>
           <td>{{ r.subject_name }}{% if r.subject_code %} <code>{{ r.subject_code }}</code>{% endif %}</td>
-          <td><span class="hours-chip">{{ r.lecture_hours }}</span></td>
-          <td><span class="hours-chip practice">{{ r.practice_hours }}</span></td>
-          <td><span class="hours-chip lab">{{ r.lab_hours }}</span></td>
-          <td><strong>{{ r.total_hours }} ч</strong></td>
+          <td><span class="hours-chip">{{ r.lecture_credits }}</span></td>
+          <td><span class="hours-chip practice">{{ r.practice_credits }}</span></td>
+          <td><span class="hours-chip lab">{{ r.lab_credits }}</span></td>
+          <td><strong>{{ r.total_credits }} {{ t('common.credits_short') }}</strong></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -54,44 +61,44 @@
 
 <!-- Сводная таблица преподавателей -->
 <div class="card mb-4">
-  <div class="card-header"><i class="bi bi-people me-2"></i>Сводная нагрузка преподавателей</div>
+  <div class="card-header"><i class="bi bi-people me-2"></i>{{ t('reports.summary') }}</div>
   <div class="card-body p-0">
     {% if all_teachers %}
     <table class="table table-hover mb-0">
       <thead>
         <tr>
-          <th>Преподаватель</th>
-          <th>Должность</th>
-          <th>Лекции</th>
-          <th>Практика</th>
-          <th>Лаб.</th>
-          <th>Итого</th>
-          <th>Макс.</th>
+          <th>{{ t('table.teacher') }}</th>
+          <th>{{ t('table.position') }}</th>
+          <th>{{ t('workload.col.lecture') }}</th>
+          <th>{{ t('workload.col.practice') }}</th>
+          <th>{{ t('workload.col.lab') }}</th>
+          <th>{{ t('workload.col.total') }}</th>
+          <th>{{ t('reports.col.max') }}</th>
           <th>%</th>
-          <th>Статус</th>
+          <th>{{ t('common.status') }}</th>
         </tr>
       </thead>
       <tbody>
-        {% for t in all_teachers %}
+        {% for tr in all_teachers %}
         <tr>
-          <td><a href="{{ url_for('workload_teacher', tid=t.id) }}"
+          <td><a href="{{ url_for('workload_teacher', tid=tr.id) }}"
                  style="color:var(--clr-text);text-decoration:none">
-            <strong>{{ t.full_name }}</strong></a></td>
-          <td><span class="badge-position">{{ t.position }}</span></td>
-          <td>{{ t.total_lecture }}</td>
-          <td>{{ t.total_practice }}</td>
-          <td>{{ t.total_lab }}</td>
-          <td><strong>{{ t.total_hours }}</strong></td>
-          <td style="color:var(--clr-muted)">{{ t.max_workload }}</td>
-          <td>{{ t.status.percent }}%</td>
-          <td><span class="badge text-bg-{{ t.status.color }}" style="font-size:11px">
-            {{ t.status.label }}</span></td>
+            <strong>{{ tr.full_name }}</strong></a></td>
+          <td><span class="badge-position">{{ position_label(tr.position) }}</span></td>
+          <td>{{ tr.total_lecture }}</td>
+          <td>{{ tr.total_practice }}</td>
+          <td>{{ tr.total_lab }}</td>
+          <td><strong>{{ tr.total_credits }}</strong></td>
+          <td style="color:var(--clr-muted)">{{ tr.max_workload }}</td>
+          <td>{{ tr.status.percent }}%</td>
+          <td><span class="badge text-bg-{{ tr.status.color }}" style="font-size:11px">
+            {{ tr.status.label }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <div class="empty-state"><i class="bi bi-people"></i>Нет данных</div>
+    <div class="empty-state"><i class="bi bi-people"></i>{{ t('common.no_data') }}</div>
     {% endif %}
   </div>
 </div>
@@ -101,19 +108,19 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-header" style="color:var(--clr-red)">
-        <i class="bi bi-exclamation-triangle me-2"></i>Перегруженные
+        <i class="bi bi-exclamation-triangle me-2"></i>{{ t('reports.overloaded') }}
         <span class="badge text-bg-danger ms-1">{{ overloaded|length }}</span>
       </div>
       <div class="card-body p-0">
         {% if overloaded %}
         <table class="table table-hover mb-0">
-          <thead><tr><th>Преподаватель</th><th>Часов</th><th>Макс.</th></tr></thead>
+          <thead><tr><th>{{ t('table.teacher') }}</th><th>{{ t('reports.col.credits') }}</th><th>{{ t('reports.col.max') }}</th></tr></thead>
           <tbody>
-            {% for t in overloaded %}
+            {% for tr in overloaded %}
             <tr>
-              <td><strong>{{ t.full_name }}</strong></td>
-              <td style="color:var(--clr-red)"><strong>{{ t.total_hours }}</strong></td>
-              <td style="color:var(--clr-muted)">{{ t.max_workload }}</td>
+              <td><strong>{{ tr.full_name }}</strong></td>
+              <td style="color:var(--clr-red)"><strong>{{ tr.total_credits }}</strong></td>
+              <td style="color:var(--clr-muted)">{{ tr.max_workload }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -121,7 +128,7 @@
         {% else %}
         <div class="empty-state" style="padding:30px">
           <i class="bi bi-check-circle" style="color:var(--clr-green)"></i>
-          <small>Перегрузки нет</small>
+          <small>{{ t('reports.no_overload') }}</small>
         </div>
         {% endif %}
       </div>
@@ -132,19 +139,19 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-header" style="color:var(--clr-yellow)">
-        <i class="bi bi-arrow-down-circle me-2"></i>Низкая нагрузка (< 60%)
+        <i class="bi bi-arrow-down-circle me-2"></i>{{ t('reports.underloaded') }}
         <span class="badge text-bg-warning ms-1">{{ underloaded|length }}</span>
       </div>
       <div class="card-body p-0">
         {% if underloaded %}
         <table class="table table-hover mb-0">
-          <thead><tr><th>Преподаватель</th><th>Часов</th><th>%</th></tr></thead>
+          <thead><tr><th>{{ t('table.teacher') }}</th><th>{{ t('reports.col.credits') }}</th><th>%</th></tr></thead>
           <tbody>
-            {% for t in underloaded %}
+            {% for tr in underloaded %}
             <tr>
-              <td><strong>{{ t.full_name }}</strong></td>
-              <td>{{ t.total_hours }}</td>
-              <td style="color:var(--clr-yellow)">{{ t.percent }}%</td>
+              <td><strong>{{ tr.full_name }}</strong></td>
+              <td>{{ tr.total_credits }}</td>
+              <td style="color:var(--clr-yellow)">{{ tr.percent }}%</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -152,7 +159,7 @@
         {% else %}
         <div class="empty-state" style="padding:30px">
           <i class="bi bi-check-circle" style="color:var(--clr-green)"></i>
-          <small>Все достаточно загружены</small>
+          <small>{{ t('reports.all_loaded') }}</small>
         </div>
         {% endif %}
       </div>
@@ -162,12 +169,12 @@
 
 <!-- Сводка по дисциплинам -->
 <div class="card mt-3">
-  <div class="card-header"><i class="bi bi-journal-text me-2"></i>Сводка по дисциплинам</div>
+  <div class="card-header"><i class="bi bi-journal-text me-2"></i>{{ t('reports.subjects_summary') }}</div>
   <div class="card-body p-0">
     {% if subjects_report %}
     <table class="table table-hover mb-0">
       <thead>
-        <tr><th>Дисциплина</th><th>Код</th><th>Преподаватели</th><th>Всего часов</th></tr>
+        <tr><th>{{ t('workload.form.subject') }}</th><th>{{ t('subjects.col.code') }}</th><th>{{ t('reports.col.teachers') }}</th><th>{{ t('reports.col.total') }}</th></tr>
       </thead>
       <tbody>
         {% for s in subjects_report %}
@@ -175,13 +182,13 @@
           <td><strong>{{ s.subject_name }}</strong></td>
           <td>{% if s.subject_code %}<code>{{ s.subject_code }}</code>{% else %}—{% endif %}</td>
           <td style="font-size:13px;color:var(--clr-muted)">{{ s.teachers or '—' }}</td>
-          <td><span class="hours-chip">{{ s.total_hours }} ч</span></td>
+          <td><span class="hours-chip">{{ s.total_credits }} {{ t('common.credits_short') }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <div class="empty-state"><i class="bi bi-journal"></i>Нет дисциплин</div>
+    <div class="empty-state"><i class="bi bi-journal"></i>{{ t('reports.no_subjects') }}</div>
     {% endif %}
   </div>
 </div>

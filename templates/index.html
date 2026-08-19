@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Обзор — Нагрузка кафедры ИИ{% endblock %}
+{% block title %}{{ t('index.title') }} — {{ t('app.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="page-title">Панель управления</div>
-  <div class="page-subtitle">{{ dept }}</div>
+  <div class="page-title">{{ t('index.title') }}</div>
+  <div class="page-subtitle">{{ dept }} · {{ project_theme }}</div>
+  <p class="page-about mt-2 mb-0" style="font-size:13px;color:var(--clr-muted);line-height:1.55;max-width:720px">
+    {{ project_description }}
+  </p>
 </div>
 
 <!-- Статистические карточки -->
@@ -12,7 +15,7 @@
   <div class="col-md-3">
     <div class="stat-card accent">
       <div class="stat-value text-info">{{ teachers|length }}</div>
-      <div class="stat-label">Преподавателей</div>
+      <div class="stat-label">{{ t('stats.teachers') }}</div>
     </div>
   </div>
   <div class="col-md-3">
@@ -20,15 +23,15 @@
       <div class="stat-value" style="color:var(--clr-accent2)">
         {{ stats.get('entries', 0) }}
       </div>
-      <div class="stat-label">Записей нагрузки</div>
+      <div class="stat-label">{{ t('stats.entries') }}</div>
     </div>
   </div>
   <div class="col-md-3">
     <div class="stat-card green">
       <div class="stat-value text-success">
-        {{ (stats.get('total_lecture',0) + stats.get('total_practice',0) + stats.get('total_lab',0)) }}
+        {{ ((stats.get('total_lecture',0) + stats.get('total_practice',0) + stats.get('total_lab',0))|round(2)) }}
       </div>
-      <div class="stat-label">Всего часов</div>
+      <div class="stat-label">{{ t('stats.total_credits') }}</div>
     </div>
   </div>
   <div class="col-md-3">
@@ -36,7 +39,7 @@
       <div class="stat-value {% if overloaded_count > 0 %}text-danger{% else %}text-success{% endif %}">
         {{ overloaded_count }}
       </div>
-      <div class="stat-label">Перегруженных</div>
+      <div class="stat-label">{{ t('stats.overloaded') }}</div>
     </div>
   </div>
 </div>
@@ -44,9 +47,9 @@
 <!-- Сводная таблица преподавателей -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-people me-2"></i>Нагрузка преподавателей</span>
+    <span><i class="bi bi-people me-2"></i>{{ t('index.workload_card') }}</span>
     <a href="{{ url_for('workload_add') }}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg me-1"></i>Назначить нагрузку
+      <i class="bi bi-plus-lg me-1"></i>{{ t('index.assign_workload') }}
     </a>
   </div>
   <div class="card-body p-0">
@@ -54,42 +57,42 @@
     <table class="table table-hover mb-0">
       <thead>
         <tr>
-          <th>Преподаватель</th>
-          <th>Должность</th>
-          <th>Часов назначено</th>
-          <th>Максимум</th>
-          <th>Загруженность</th>
-          <th>Статус</th>
+          <th>{{ t('table.teacher') }}</th>
+          <th>{{ t('table.position') }}</th>
+          <th>{{ t('table.credits_assigned') }}</th>
+          <th>{{ t('table.max') }}</th>
+          <th>{{ t('table.load') }}</th>
+          <th>{{ t('common.status') }}</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for t in teachers %}
+        {% for tr in teachers %}
         <tr>
-          <td><strong>{{ t.full_name }}</strong></td>
-          <td><span class="badge-position">{{ t.position }}</span></td>
+          <td><strong>{{ tr.full_name }}</strong></td>
+          <td><span class="badge-position">{{ position_label(tr.position) }}</span></td>
           <td>
-            <span class="hours-chip">{{ t.total_hours }} ч</span>
+            <span class="hours-chip">{{ tr.total_credits }} {{ t('common.credits_short') }}</span>
           </td>
-          <td style="color:var(--clr-muted)">{{ t.max_workload }} ч</td>
+          <td style="color:var(--clr-muted)">{{ tr.max_workload }} {{ t('common.credits_short') }}</td>
           <td style="min-width:120px">
             <div class="d-flex align-items-center gap-2">
               <div class="progress flex-grow-1">
-                <div class="progress-bar bg-{{ t.status.color }}"
-                     style="width:{{ t.status.percent }}%"></div>
+                <div class="progress-bar bg-{{ tr.status.color }}"
+                     style="width:{{ tr.status.percent }}%"></div>
               </div>
               <small style="color:var(--clr-muted);font-size:11px;white-space:nowrap">
-                {{ t.status.percent }}%
+                {{ tr.status.percent }}%
               </small>
             </div>
           </td>
           <td>
-            <span class="badge text-bg-{{ t.status.color }}" style="font-size:11px">
-              {{ t.status.label }}
+            <span class="badge text-bg-{{ tr.status.color }}" style="font-size:11px">
+              {{ tr.status.label }}
             </span>
           </td>
           <td>
-            <a href="{{ url_for('workload_teacher', tid=t.id) }}"
+            <a href="{{ url_for('workload_teacher', tid=tr.id) }}"
                class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-eye"></i>
             </a>
@@ -101,16 +104,16 @@
     {% else %}
     <div class="empty-state">
       <i class="bi bi-people"></i>
-      Преподаватели ещё не добавлены.
+      {{ t('teachers.empty') }}
       <br><a href="{{ url_for('teacher_add') }}" class="btn btn-primary mt-3">
-        Добавить первого преподавателя
+        {{ t('teachers.add') }}
       </a>
     </div>
     {% endif %}
   </div>
 </div>
 
-<!-- Распределение часов -->
+<!-- Распределение кредитов -->
 {% if stats.get('entries', 0) > 0 %}
 <div class="row g-3 mt-1">
   <div class="col-md-4">
@@ -120,7 +123,7 @@
           {{ stats.get('total_lecture', 0) }}
         </div>
         <div style="font-size:12px;color:var(--clr-muted);margin-top:4px">
-          <i class="bi bi-easel me-1"></i>Лекционных часов
+          <i class="bi bi-easel me-1"></i>{{ t('stats.lecture_credits') }}
         </div>
       </div>
     </div>
@@ -132,7 +135,7 @@
           {{ stats.get('total_practice', 0) }}
         </div>
         <div style="font-size:12px;color:var(--clr-muted);margin-top:4px">
-          <i class="bi bi-clipboard me-1"></i>Практических часов
+          <i class="bi bi-clipboard me-1"></i>{{ t('stats.practice_credits') }}
         </div>
       </div>
     </div>
@@ -144,7 +147,7 @@
           {{ stats.get('total_lab', 0) }}
         </div>
         <div style="font-size:12px;color:var(--clr-muted);margin-top:4px">
-          <i class="bi bi-cpu me-1"></i>Лабораторных часов
+          <i class="bi bi-cpu me-1"></i>{{ t('stats.lab_credits') }}
         </div>
       </div>
     </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ current_lang or 'ru' }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Нагрузка кафедры ИИ{% endblock %}</title>
+  <title>{% block title %}{{ t('app.title') }}{% endblock %}</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -24,7 +24,7 @@
 
 <!-- ── Мобильная шапка (только на телефонах) ────────────── -->
 <header class="mobile-topbar">
-  <button class="mobile-menu-btn" onclick="toggleSidebar()" id="menu-btn">
+  <button class="mobile-menu-btn js-toggle-sidebar" id="menu-btn">
     <i class="bi bi-list" id="menu-icon"></i>
   </button>
   <div class="mobile-title">КАФ / ИИ</div>
@@ -38,51 +38,64 @@
 </header>
 
 <!-- ── Оверлей (затемнение при открытом меню) ───────────── -->
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="sidebar-overlay js-toggle-sidebar" id="sidebar-overlay"></div>
 
 <!-- ── Sidebar ──────────────────────────────────────── -->
 <aside class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">КАФ / ИИ</div>
-    <div class="sidebar-title">Управление учебной нагрузкой</div>
+    <div class="sidebar-title">{{ project_theme }}</div>
+    <div class="sidebar-desc">{{ dept }}</div>
   </div>
 
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Навигация</div>
-    <a href="{{ url_for('index') }}" onclick="closeSidebar()"
+    <div class="nav-section-label">{{ t('nav.section.navigation') }}</div>
+    <a href="{{ url_for('index') }}" data-close-sidebar="1"
        class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
-      <i class="bi bi-speedometer2"></i> Обзор
+      <i class="bi bi-speedometer2"></i> {{ t('nav.overview') }}
     </a>
-    <a href="{{ url_for('teachers_list') }}" onclick="closeSidebar()"
+    <a href="{{ url_for('teachers_list') }}" data-close-sidebar="1"
        class="nav-link {% if 'teacher' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-people"></i> Преподаватели
+      <i class="bi bi-people"></i> {{ t('nav.teachers') }}
     </a>
-    <a href="{{ url_for('subjects_list') }}" onclick="closeSidebar()"
+    <a href="{{ url_for('subjects_list') }}" data-close-sidebar="1"
        class="nav-link {% if 'subject' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-journal-text"></i> Дисциплины
+      <i class="bi bi-journal-text"></i> {{ t('nav.subjects') }}
     </a>
-    <a href="{{ url_for('workload_list') }}" onclick="closeSidebar()"
+    <a href="{{ url_for('workload_list') }}" data-close-sidebar="1"
        class="nav-link {% if 'workload' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-bar-chart-line"></i> Нагрузка
+      <i class="bi bi-bar-chart-line"></i> {{ t('nav.workload') }}
     </a>
 
-    <div class="nav-section-label">Аналитика</div>
-    <a href="{{ url_for('reports_page') }}" onclick="closeSidebar()"
+    <div class="nav-section-label">{{ t('nav.section.analytics') }}</div>
+    <a href="{{ url_for('reports_page') }}" data-close-sidebar="1"
        class="nav-link {% if request.endpoint == 'reports_page' %}active{% endif %}">
-      <i class="bi bi-file-earmark-bar-graph"></i> Отчёты
+      <i class="bi bi-file-earmark-bar-graph"></i> {{ t('nav.reports') }}
     </a>
-    <a href="{{ url_for('ai_page') }}" onclick="closeSidebar()"
+    <a href="{{ url_for('ai_page') }}" data-close-sidebar="1"
        class="nav-link {% if 'ai' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-stars"></i> ИИ-ассистент
+      <i class="bi bi-stars"></i> {{ t('nav.ai') }}
     </a>
 
     {% if current_user.is_authenticated and current_user.is_admin() %}
-    <div class="nav-section-label">Администрирование</div>
-    <a href="{{ url_for('users_list') }}" onclick="closeSidebar()"
+    <div class="nav-section-label">{{ t('nav.section.administration') }}</div>
+    <a href="{{ url_for('users_list') }}" data-close-sidebar="1"
        class="nav-link {% if 'user' in request.endpoint %}active{% endif %}">
-      <i class="bi bi-shield-lock"></i> Пользователи
+      <i class="bi bi-shield-lock"></i> {{ t('nav.users') }}
     </a>
     {% endif %}
+
+    <!-- ── Переключатель языка ─────────────────────────── -->
+    <div class="nav-section-label">{{ t('common.language') }}</div>
+    <div class="lang-switcher">
+      {% for code, name in languages.items() %}
+      <a href="{{ url_for('set_language', lang=code) }}"
+         class="lang-btn {% if current_lang == code %}active{% endif %}"
+         title="{{ name }}">
+        {{ code|upper }}
+      </a>
+      {% endfor %}
+    </div>
   </nav>
 
   <!-- Блок текущего пользователя -->
@@ -96,21 +109,21 @@
         <div class="sidebar-user-name">{{ current_user.full_name.split()[0] }}</div>
         <div class="sidebar-user-role">
           {% if current_user.role == 'admin' %}
-            <i class="bi bi-shield-fill" style="color:var(--clr-red)"></i> Администратор
+            <i class="bi bi-shield-fill" style="color:var(--clr-red)"></i> {{ t('role.admin') }}
           {% elif current_user.role == 'editor' %}
-            <i class="bi bi-pencil-square" style="color:var(--clr-accent)"></i> Редактор
+            <i class="bi bi-pencil-square" style="color:var(--clr-accent)"></i> {{ t('role.editor') }}
           {% else %}
-            <i class="bi bi-eye" style="color:var(--clr-green)"></i> Наблюдатель
+            <i class="bi bi-eye" style="color:var(--clr-green)"></i> {{ t('role.viewer') }}
           {% endif %}
         </div>
       </div>
     </div>
     <div class="sidebar-user-actions">
       <a href="{{ url_for('profile') }}" class="sidebar-user-btn">
-        <i class="bi bi-person-gear"></i> Профиль
+        <i class="bi bi-person-gear"></i> {{ t('nav.profile') }}
       </a>
       <a href="{{ url_for('logout') }}" class="sidebar-user-btn logout">
-        <i class="bi bi-box-arrow-right"></i> Выход
+        <i class="bi bi-box-arrow-right"></i> {{ t('nav.logout') }}
       </a>
     </div>
   </div>
@@ -135,6 +148,24 @@
 
 <!-- Bootstrap JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<!-- Локализация JS-строк -->
+<script>
+  window.I18N = {
+    aiThinking:   {{ t('js.ai.thinking')|tojson }},
+    aiError:      {{ t('js.ai.error')|tojson }},
+    aiNoMatch:    {{ t('js.ai.no_match')|tojson }},
+    aiAnalyzing:  {{ t('js.ai.analyzing')|tojson }},
+    aiCalculating:{{ t('js.ai.calculating')|tojson }},
+    aiScore:      {{ t('js.ai.score')|tojson }},
+    aiFree:       {{ t('js.ai.free')|tojson }},
+    aiAfter:      {{ t('js.ai.after')|tojson }},
+    aiLecture:    {{ t('js.ai.lecture')|tojson }},
+    aiPractice:   {{ t('js.ai.practice')|tojson }},
+    aiLab:        {{ t('js.ai.lab')|tojson }},
+    aiBasedOn:    {{ t('js.ai.based_on')|tojson }},
+    confirmDel:   {{ t('js.confirm_delete')|tojson }},
+  };
+</script>
 <!-- Основные скрипты проекта -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
@@ -142,43 +173,40 @@
 
 <!-- ── ИИ-виджет ─────────────────────────────────────────── -->
 {% if current_user.is_authenticated %}
-<button class="ai-btn" onclick="toggleAI()" title="ИИ-ассистент">
+<button class="ai-btn js-toggle-ai" title="{{ t('ai.title') }}">
   <i class="bi bi-stars"></i>
-  <span class="ai-badge">ИИ</span>
+  <span class="ai-badge">{{ t('ai.title')[:2]|upper }}</span>
 </button>
 
 <div class="ai-panel" id="ai-panel">
   <div class="ai-header">
     <div class="ai-avatar"><i class="bi bi-stars"></i></div>
     <div class="ai-header-info">
-      <div class="ai-header-name">ИИ-ассистент кафедры</div>
-      <div class="ai-header-status">● Онлайн — знает данные кафедры</div>
+      <div class="ai-header-name">{{ t('ai.title') }}</div>
+      <div class="ai-header-status">{{ t('ai.online') }}</div>
     </div>
-    <button class="ai-close-btn" onclick="toggleAI()">
+    <button class="ai-close-btn js-toggle-ai">
       <i class="bi bi-x"></i>
     </button>
   </div>
 
   <div class="ai-messages" id="ai-messages">
     <div class="ai-msg bot">
-      Привет! 👋 Я ИИ-ассистент кафедры ИИ.<br><br>
-      Знаю всех преподавателей, их нагрузку и дисциплины. Спросите меня о чём угодно!
+      {{ t('ai.greeting') }}
     </div>
   </div>
 
   <div class="ai-suggestions" id="ai-suggestions">
-    <button class="ai-suggest-btn" onclick="sendSuggestion('Кто перегружен?')">Кто перегружен?</button>
-    <button class="ai-suggest-btn" onclick="sendSuggestion('Покажи сводку по нагрузке')">Сводка нагрузки</button>
-    <button class="ai-suggest-btn" onclick="sendSuggestion('У кого мало часов?')">Мало часов</button>
-    <button class="ai-suggest-btn" onclick="sendSuggestion('Дай рекомендации по распределению')">Рекомендации</button>
+    <button class="ai-suggest-btn js-ai-suggestion" data-text="{{ t('ai.suggest.overload_text') }}">{{ t('ai.suggest.overload') }}</button>
+    <button class="ai-suggest-btn js-ai-suggestion" data-text="{{ t('ai.suggest.summary_text') }}">{{ t('ai.suggest.summary') }}</button>
+    <button class="ai-suggest-btn js-ai-suggestion" data-text="{{ t('ai.suggest.low_text') }}">{{ t('ai.suggest.low') }}</button>
+    <button class="ai-suggest-btn js-ai-suggestion" data-text="{{ t('ai.suggest.recommend_text') }}">{{ t('ai.suggest.recommend') }}</button>
   </div>
 
   <div class="ai-input-area">
     <textarea class="ai-input" id="ai-input" rows="1"
-      placeholder="Спросите о нагрузке, расписании..."
-      onkeydown="handleAIKey(event)"
-      oninput="autoResize(this)"></textarea>
-    <button class="ai-send-btn" id="ai-send" onclick="sendAIMessage()">
+      placeholder="{{ t('ai.placeholder') }}"></textarea>
+    <button class="ai-send-btn" id="ai-send">
       <i class="bi bi-send-fill"></i>
     </button>
   </div>

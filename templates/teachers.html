@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Преподаватели{% endblock %}
+{% block title %}{{ t('teachers.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-start">
   <div>
-    <div class="page-title">Преподаватели</div>
-    <div class="page-subtitle">{{ teachers|length }} сотрудников кафедры</div>
+    <div class="page-title">{{ t('teachers.title') }}</div>
+    <div class="page-subtitle">{{ teachers|length }} {{ t('teachers.subtitle') }}</div>
   </div>
   <a href="{{ url_for('teacher_add') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Добавить преподавателя
+    <i class="bi bi-plus-lg me-1"></i>{{ t('teachers.add') }}
   </a>
 </div>
 
@@ -19,35 +19,37 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>ФИО</th>
-          <th>Должность</th>
-          <th>Email</th>
-          <th>Макс. нагрузка</th>
-          <th>Действия</th>
+          <th>{{ t('teachers.col.full_name') }}</th>
+          <th>{{ t('teachers.col.position') }}</th>
+          <th>{{ t('teachers.col.rate') }}</th>
+          <th>{{ t('teachers.col.email') }}</th>
+          <th>{{ t('teachers.col.max') }}</th>
+          <th>{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
-        {% for t in teachers %}
+        {% for t_row in teachers %}
         <tr>
           <td style="color:var(--clr-muted)">{{ loop.index }}</td>
-          <td><strong>{{ t['full_name'] }}</strong></td>
-          <td><span class="badge-position">{{ t['position'] }}</span></td>
-          <td style="color:var(--clr-muted)">{{ t['email'] or '—' }}</td>
-          <td><span class="hours-chip">{{ t['max_workload'] }} ч</span></td>
+          <td><strong>{{ t_row['full_name'] }}</strong></td>
+          <td><span class="badge-position">{{ position_label(t_row['position']) }}</span></td>
+          <td><span class="hours-chip">{{ '%g'|format(t_row['rate'] or 1) }}</span></td>
+          <td style="color:var(--clr-muted)">{{ t_row['email'] or '—' }}</td>
+          <td><span class="hours-chip">{{ t_row['max_workload'] }} {{ t('common.credits_short') }}</span></td>
           <td>
             <div class="d-flex gap-1">
-              <a href="{{ url_for('workload_teacher', tid=t['id']) }}"
-                 class="btn btn-outline-secondary btn-sm" title="Нагрузка">
+              <a href="{{ url_for('workload_teacher', tid=t_row['id']) }}"
+                 class="btn btn-outline-secondary btn-sm" title="{{ t('nav.workload') }}">
                 <i class="bi bi-bar-chart-line"></i>
               </a>
-              <a href="{{ url_for('teacher_edit', tid=t['id']) }}"
-                 class="btn btn-outline-secondary btn-sm" title="Редактировать">
+              <a href="{{ url_for('teacher_edit', tid=t_row['id']) }}"
+                 class="btn btn-outline-secondary btn-sm" title="{{ t('common.edit') }}">
                 <i class="bi bi-pencil"></i>
               </a>
-              <form method="post" action="{{ url_for('teacher_delete', tid=t['id']) }}"
-                    onsubmit="return confirm('Удалить преподавателя «{{ t['full_name'] }}» и всю его нагрузку?')">
+              <form method="post" action="{{ url_for('teacher_delete', tid=t_row['id']) }}"
+                    onsubmit="return confirm('{{ t('teachers.confirm_delete', name=t_row['full_name']) }}')">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)"
-                        title="Удалить">
+                        title="{{ t('common.delete') }}">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
@@ -60,9 +62,9 @@
     {% else %}
     <div class="empty-state">
       <i class="bi bi-person-plus"></i>
-      Преподаватели ещё не добавлены.
+      {{ t('teachers.empty') }}
       <br><a href="{{ url_for('teacher_add') }}" class="btn btn-primary mt-3">
-        Добавить первого
+        {{ t('teachers.add_first') }}
       </a>
     </div>
     {% endif %}

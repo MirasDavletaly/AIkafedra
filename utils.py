@@ -1,41 +1,59 @@
 
-from config import POSITION_MAX_WORKLOAD, MAX_WORKLOAD_DEFAULT
+from config import POSITION_MAX_WORKLOAD, MAX_WORKLOAD_DEFAULT, HOURS_PER_CREDIT, DEFAULT_LANG
+from i18n import t
 
 
 def get_max_workload_for_position(position: str) -> int:
     return POSITION_MAX_WORKLOAD.get(position, MAX_WORKLOAD_DEFAULT)
 
 
-def calculate_total_hours(lecture: int, practice: int, lab: int) -> int:
-    return (lecture or 0) + (practice or 0) + (lab or 0)
+def calculate_total_credits(lecture: float, practice: float, lab: float) -> float:
+    """Сумма кредитов по видам занятий (лекции + практика + лаб.)."""
+    return float(lecture or 0) + float(practice or 0) + float(lab or 0)
 
 
-def workload_status(current: int, maximum: int) -> dict:
-    if maximum == 0:
-        return {"percent": 0, "label": "Не задана", "color": "secondary"}
+def credits_to_hours(credits: float) -> float:
+    """Перевод кредитов в академические часы (Приложение 3, п. 1–2 PDF)."""
+    return round(float(credits or 0) * HOURS_PER_CREDIT, 2)
+
+
+def workload_status(current: float, maximum: float, lang: str = DEFAULT_LANG) -> dict:
+    """Статус загруженности преподавателя (в кредитах).
+
+    Возвращает dict с полями:
+      percent, label (локализованная), label_key (i18n-ключ), color.
+    Шаблоны могут перевести label через t(label_key, current_lang).
+    """
+    if not maximum:
+        return {"percent": 0, "label": t("status.none", lang),
+                "label_key": "status.none", "color": "secondary"}
 
     percent = round(current / maximum * 100, 1)
 
     if percent < 60:
-        label, color = "Низкая", "info"
+        label_key, color = "status.low", "info"
     elif percent < 85:
-        label, color = "Нормальная", "success"
+        label_key, color = "status.normal", "success"
     elif percent <= 100:
-        label, color = "Высокая", "warning"
+        label_key, color = "status.high", "warning"
     else:
-        label, color = "Перегрузка!", "danger"
+        label_key, color = "status.overload", "danger"
 
-    return {"percent": min(percent, 100), "label": label, "color": color}
+    return {"percent": min(percent, 100), "label": t(label_key, lang),
+            "label_key": label_key, "color": color}
 
 
-def validate_hours(value, field_name: str) -> tuple[int, str | None]:
+def validate_credits(value, field_name: str) -> tuple[float, str | None]:
+    """Парсит дробное значение кредитов (≥ 0). Возвращает (значение, ошибка)."""
     try:
-        val = int(value)
+        if value is None or value == "":
+            return 0.0, None
+        val = float(str(value).replace(",", "."))
         if val < 0:
             raise ValueError
-        return val, None
+        return round(val, 2), None
     except (ValueError, TypeError):
-        return 0, f"Поле «{field_name}» должно быть неотрицательным числом."
+        return 0.0, f"Поле «{field_name}» должно быть неотрицательным числом."
 
 
 def format_teacher_name(full_name: str) -> str:

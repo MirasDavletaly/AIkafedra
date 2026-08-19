@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Нагрузка: {{ teacher.full_name }}{% endblock %}
+{% block title %}{{ t('wt.title', name=teacher.full_name) }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-title">{{ teacher['full_name'] }}</div>
   <div class="page-subtitle">
     <a href="{{ url_for('workload_list') }}" style="color:var(--clr-muted);text-decoration:none">
-      <i class="bi bi-arrow-left me-1"></i>Назад
+      <i class="bi bi-arrow-left me-1"></i>{{ t('common.back') }}
     </a>
-    &nbsp;·&nbsp; <span class="badge-position">{{ teacher['position'] }}</span>
+    &nbsp;·&nbsp; <span class="badge-position">{{ position_label(teacher['position']) }}</span>
   </div>
 </div>
 
@@ -16,20 +16,20 @@
 <div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="stat-card accent">
-      <div class="stat-value text-info">{{ total_hours }}</div>
-      <div class="stat-label">Назначено часов</div>
+      <div class="stat-value text-info">{{ total_credits }}</div>
+      <div class="stat-label">{{ t('wt.stats.assigned') }}</div>
     </div>
   </div>
   <div class="col-md-3">
     <div class="stat-card">
       <div class="stat-value" style="color:var(--clr-muted)">{{ teacher['max_workload'] }}</div>
-      <div class="stat-label">Максимум часов</div>
+      <div class="stat-label">{{ t('wt.stats.max') }}</div>
     </div>
   </div>
   <div class="col-md-3">
     <div class="stat-card {{ status.color }}">
       <div class="stat-value text-{{ status.color }}">{{ status.percent }}%</div>
-      <div class="stat-label">Загруженность</div>
+      <div class="stat-label">{{ t('wt.stats.load') }}</div>
     </div>
   </div>
   <div class="col-md-3">
@@ -37,7 +37,7 @@
       <div class="stat-value text-{{ status.color }}" style="font-size:20px;padding-top:8px">
         {{ status.label }}
       </div>
-      <div class="stat-label">Статус</div>
+      <div class="stat-label">{{ t('wt.stats.status') }}</div>
     </div>
   </div>
 </div>
@@ -46,8 +46,8 @@
 <div class="card mb-4">
   <div class="card-body">
     <div class="d-flex justify-content-between mb-2">
-      <small style="color:var(--clr-muted)">Загруженность преподавателя</small>
-      <small style="color:var(--clr-muted)">{{ total_hours }} / {{ teacher['max_workload'] }} ч</small>
+      <small style="color:var(--clr-muted)">{{ t('wt.progress.title') }}</small>
+      <small style="color:var(--clr-muted)">{{ total_credits }} / {{ teacher['max_workload'] }} {{ t('common.credits_short') }}</small>
     </div>
     <div class="progress" style="height:10px">
       <div class="progress-bar bg-{{ status.color }}"
@@ -59,9 +59,9 @@
 <!-- Таблица нагрузки -->
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-journal-check me-2"></i>Назначенные дисциплины</span>
+    <span><i class="bi bi-journal-check me-2"></i>{{ t('wt.card.title') }}</span>
     <a href="{{ url_for('workload_add') }}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg me-1"></i>Добавить дисциплину
+      <i class="bi bi-plus-lg me-1"></i>{{ t('wt.add_subject') }}
     </a>
   </div>
   <div class="card-body p-0">
@@ -69,13 +69,13 @@
     <table class="table table-hover mb-0">
       <thead>
         <tr>
-          <th>Дисциплина</th>
-          <th>Семестр</th>
-          <th>Лекции</th>
-          <th>Практика</th>
-          <th>Лаб.</th>
-          <th>Итого</th>
-          <th>Уч. год</th>
+          <th>{{ t('wt.col.subject') }}</th>
+          <th>{{ t('common.semester') }}</th>
+          <th>{{ t('workload.col.lecture') }}</th>
+          <th>{{ t('workload.col.practice') }}</th>
+          <th>{{ t('workload.col.lab') }}</th>
+          <th>{{ t('workload.col.total') }}</th>
+          <th>{{ t('workload.col.year') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -88,18 +88,18 @@
             {% endif %}
           </td>
           <td>{{ e['semester'] }}</td>
-          <td><span class="hours-chip">{{ e['lecture_hours'] }}</span></td>
-          <td><span class="hours-chip practice">{{ e['practice_hours'] }}</span></td>
-          <td><span class="hours-chip lab">{{ e['lab_hours'] }}</span></td>
-          <td><strong>{{ e['total_hours'] }} ч</strong></td>
+          <td><span class="hours-chip">{{ e['lecture_credits'] }}</span></td>
+          <td><span class="hours-chip practice">{{ e['practice_credits'] }}</span></td>
+          <td><span class="hours-chip lab">{{ e['lab_credits'] }}</span></td>
+          <td><strong>{{ e['total_credits'] }} {{ t('common.credits_short') }}</strong></td>
           <td style="color:var(--clr-muted);font-size:12px">{{ e['academic_year'] }}</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr style="border-top:2px solid var(--clr-border)">
-          <td colspan="5" style="text-align:right;color:var(--clr-muted)">Итого:</td>
-          <td><strong>{{ total_hours }} ч</strong></td>
+          <td colspan="5" style="text-align:right;color:var(--clr-muted)">{{ t('wt.total') }}</td>
+          <td><strong>{{ total_credits }} {{ t('common.credits_short') }}</strong></td>
           <td></td>
         </tr>
       </tfoot>
@@ -107,7 +107,7 @@
     {% else %}
     <div class="empty-state">
       <i class="bi bi-journal-plus"></i>
-      Нагрузка для этого преподавателя не назначена.
+      {{ t('wt.empty') }}
     </div>
     {% endif %}
   </div>

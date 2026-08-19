@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Дисциплины{% endblock %}
+{% block title %}{{ t('subjects.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-start">
   <div>
-    <div class="page-title">Дисциплины</div>
-    <div class="page-subtitle">{{ subjects|length }} дисциплин в базе</div>
+    <div class="page-title">{{ t('subjects.title') }}</div>
+    <div class="page-subtitle">{{ subjects|length }} {{ t('subjects.subtitle') }}</div>
   </div>
   <a href="{{ url_for('subject_add') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Добавить дисциплину
+    <i class="bi bi-plus-lg me-1"></i>{{ t('subjects.add') }}
   </a>
 </div>
 
@@ -19,10 +19,12 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>Код</th>
-          <th>Название</th>
-          <th>Описание</th>
-          <th>Действия</th>
+          <th>{{ t('subjects.col.code') }}</th>
+          <th>{{ t('subjects.col.name') }}</th>
+          <th>{{ t('subjects.col.credits') }}</th>
+          <th>≈ {{ t('common.hours') }} ({{ hours_per_credit|int }} / {{ t('common.credits_short') }})</th>
+          <th>{{ t('subjects.col.description') }}</th>
+          <th>{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -37,6 +39,13 @@
             {% endif %}
           </td>
           <td><strong>{{ s['name'] }}</strong></td>
+          <td>
+            <span class="hours-chip">{{ s['credits'] if s['credits'] is not none else 0 }} {{ t('common.credits_short') }}</span>
+          </td>
+          <td style="font-size:12px;color:var(--clr-muted);font-family:'IBM Plex Mono',monospace">
+            {% set c = (s['credits'] or 0)|float %}
+            {{ (c * hours_per_credit)|round(1) }}
+          </td>
           <td style="color:var(--clr-muted);font-size:13px">
             {{ s['description'] or '—' }}
           </td>
@@ -47,7 +56,7 @@
                 <i class="bi bi-pencil"></i>
               </a>
               <form method="post" action="{{ url_for('subject_delete', sid=s['id']) }}"
-                    onsubmit="return confirm('Удалить дисциплину «{{ s['name'] }}»?')">
+                    onsubmit="return confirm('{{ t('subjects.confirm_delete', name=s['name']) }}')">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -61,9 +70,9 @@
     {% else %}
     <div class="empty-state">
       <i class="bi bi-journal-plus"></i>
-      Дисциплины ещё не добавлены.
+      {{ t('subjects.empty') }}
       <br><a href="{{ url_for('subject_add') }}" class="btn btn-primary mt-3">
-        Добавить первую дисциплину
+        {{ t('subjects.add') }}
       </a>
     </div>
     {% endif %}

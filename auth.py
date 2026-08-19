@@ -1,6 +1,23 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from database import get_connection
+from i18n import t
+from config import DEFAULT_LANG
+
+try:
+    from flask import has_request_context, session
+except Exception:  # pragma: no cover
+    has_request_context = lambda: False  # type: ignore
+    session = None  # type: ignore
+
+
+def _current_lang():
+    try:
+        if has_request_context() and session is not None:
+            return session.get("lang", DEFAULT_LANG)
+    except Exception:
+        pass
+    return DEFAULT_LANG
 
 class User(UserMixin):
 
@@ -20,6 +37,8 @@ class User(UserMixin):
 
     def can_edit(self):
         return self.role in ("admin", "editor")
+
+
 def get_user_by_id(user_id: int):
     conn = get_connection()
     row  = conn.execute(
@@ -61,7 +80,7 @@ def get_all_users() -> list:
 def create_user(username: str, password: str, full_name: str, role: str) -> int:
     username = username.strip().lower()
     if get_user_by_username(username):
-        raise ValueError(f"Пользователь «{username}» уже существует.")
+        raise ValueError(t("users.flash.exists", _current_lang(), name=username))
 
     pw_hash = generate_password_hash(password)
     conn    = get_connection()
@@ -104,7 +123,7 @@ def delete_user(user_id: int) -> bool:
         ).fetchone()[0]
         if admins <= 1:
             conn.close()
-            raise ValueError("Нельзя удалить единственного администратора.")
+            raise ValueError(t("users.flash.last_admin", _current_lang()))
     cur = conn.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
     ok = cur.rowcount > 0
@@ -126,3 +145,5 @@ ROLES = [
     ("editor", "Редактор — добавление и редактирование"),
     ("viewer", "Наблюдатель — только просмотр"),
 ]
+
+ROLE_KEYS = ["admin", "editor", "viewer"]

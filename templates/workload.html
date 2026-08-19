@@ -1,15 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Учебная нагрузка{% endblock %}
+{% block title %}{{ t('workload.title') }}{% endblock %}
 
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-start">
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
   <div>
-    <div class="page-title">Учебная нагрузка</div>
-    <div class="page-subtitle">{{ entries|length }} записей назначений</div>
+    <div class="page-title">{{ t('workload.title') }}</div>
+    <div class="page-subtitle">{{ entries|length }} {{ t('workload.subtitle') }}</div>
   </div>
-  <a href="{{ url_for('workload_add') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Назначить нагрузку
-  </a>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if entries %}
+    <a href="{{ url_for('workload_export_xlsx') }}"
+       class="btn btn-outline-secondary"
+       title="{{ t('workload.export') }} (.xlsx)">
+      <i class="bi bi-file-earmark-excel me-1"></i>{{ t('workload.export') }}
+    </a>
+    {% endif %}
+    <a href="{{ url_for('workload_add') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>{{ t('index.assign_workload') }}
+    </a>
+  </div>
 </div>
 
 <div class="card">
@@ -18,15 +27,15 @@
     <table class="table table-hover mb-0">
       <thead>
         <tr>
-          <th>Преподаватель</th>
-          <th>Дисциплина</th>
-          <th>Сем.</th>
-          <th>Лекции</th>
-          <th>Практика</th>
-          <th>Лаб.</th>
-          <th>Итого</th>
-          <th>Уч. год</th>
-          <th>Действия</th>
+          <th>{{ t('table.teacher') }}</th>
+          <th>{{ t('workload.form.subject') }}</th>
+          <th>{{ t('common.semester_short') }}</th>
+          <th>{{ t('workload.col.lecture') }}</th>
+          <th>{{ t('workload.col.practice') }}</th>
+          <th>{{ t('workload.col.lab') }}</th>
+          <th>{{ t('workload.col.total') }}</th>
+          <th>{{ t('workload.col.year') }}</th>
+          <th>{{ t('common.actions') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -37,7 +46,7 @@
                style="color:var(--clr-text);text-decoration:none">
               <strong>{{ e['teacher_name'] }}</strong>
             </a>
-            <br><small style="color:var(--clr-muted)">{{ e['position'] }}</small>
+            <br><small style="color:var(--clr-muted)">{{ position_label(e['position']) }}</small>
           </td>
           <td>
             {{ e['subject_name'] }}
@@ -46,10 +55,10 @@
             {% endif %}
           </td>
           <td style="color:var(--clr-muted)">{{ e['semester'] }}</td>
-          <td><span class="hours-chip">{{ e['lecture_hours'] }}</span></td>
-          <td><span class="hours-chip practice">{{ e['practice_hours'] }}</span></td>
-          <td><span class="hours-chip lab">{{ e['lab_hours'] }}</span></td>
-          <td><strong>{{ e['total_hours'] }} ч</strong></td>
+          <td><span class="hours-chip">{{ e['lecture_credits'] }}</span></td>
+          <td><span class="hours-chip practice">{{ e['practice_credits'] }}</span></td>
+          <td><span class="hours-chip lab">{{ e['lab_credits'] }}</span></td>
+          <td><strong>{{ e['total_credits'] }} {{ t('common.credits_short') }}</strong></td>
           <td style="color:var(--clr-muted);font-size:12px">{{ e['academic_year'] }}</td>
           <td>
             <div class="d-flex gap-1">
@@ -58,7 +67,7 @@
                 <i class="bi bi-pencil"></i>
               </a>
               <form method="post" action="{{ url_for('workload_delete', wid=e['id']) }}"
-                    onsubmit="return confirm('Удалить эту запись нагрузки?')">
+                    onsubmit="return confirm('{{ t('common.confirm_delete') }}')">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -72,9 +81,9 @@
     {% else %}
     <div class="empty-state">
       <i class="bi bi-bar-chart-line"></i>
-      Нагрузка ещё не назначена.
+      {{ t('workload.empty') }}
       <br><a href="{{ url_for('workload_add') }}" class="btn btn-primary mt-3">
-        Назначить первую дисциплину
+        {{ t('index.assign_workload') }}
       </a>
     </div>
     {% endif %}

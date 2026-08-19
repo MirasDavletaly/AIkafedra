@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Редактировать' if action == 'edit' else 'Добавить' }} преподавателя{% endblock %}
+{% block title %}{{ t('teachers.form.title_edit') if action == 'edit' else t('teachers.form.title_add') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-title">
-    {{ 'Редактировать преподавателя' if action == 'edit' else 'Новый преподаватель' }}
+    {{ t('teachers.form.title_edit') if action == 'edit' else t('teachers.form.title_add') }}
   </div>
   <div class="page-subtitle">
     <a href="{{ url_for('teachers_list') }}" style="color:var(--clr-muted);text-decoration:none">
-      <i class="bi bi-arrow-left me-1"></i>Назад к списку
+      <i class="bi bi-arrow-left me-1"></i>{{ t('common.back_to_list') }}
     </a>
   </div>
 </div>
@@ -17,42 +17,66 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-header">
-        <i class="bi bi-person-badge me-2"></i>Данные преподавателя
+        <i class="bi bi-person-badge me-2"></i>{{ t('teachers.form.card_title') }}
       </div>
       <div class="card-body">
         <form method="post">
           <div class="mb-3">
-            <label class="form-label">ФИО *</label>
+            <label class="form-label">{{ t('teachers.form.full_name') }} *</label>
             <input type="text" name="full_name" class="form-control"
-                   placeholder="Иванов Иван Иванович"
+                   placeholder="{{ t('teachers.form.full_name_placeholder') }}"
                    value="{{ teacher.full_name if teacher else '' }}" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Должность *</label>
-            <select name="position" id="position-select" class="form-select" required>
-              <option value="">— Выберите должность —</option>
+            <label class="form-label">{{ t('teachers.form.position') }} *</label>
+            <select name="position" id="position-select" class="form-select"
+                    data-position-workloads='{{ position_workloads | tojson }}'
+                    data-supervisor-only='{{ supervisor_only | tojson }}' required>
+              <option value="">{{ t('teachers.form.choose_position') }}</option>
               {% for pos in positions %}
               <option value="{{ pos }}"
                 {% if teacher and teacher.position == pos %}selected{% endif %}>
-                {{ pos }}
+                {{ position_label(pos) }}
               </option>
               {% endfor %}
             </select>
+            <div id="position-supervisor-warning"
+                 class="form-text"
+                 style="color:var(--clr-yellow);font-size:12px;margin-top:6px;display:none">
+              <i class="bi bi-info-circle me-1"></i>
+              {{ t('workload.researcher_warning') }}
+            </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Максимальная нагрузка (часов/год) *</label>
-            <input type="number" name="max_workload" id="max-workload" class="form-control"
-                   min="0" max="2000"
-                   value="{{ teacher.max_workload if teacher else 900 }}" required>
-            <div class="form-text" style="color:var(--clr-muted);font-size:11px;margin-top:4px">
-              Автоматически заполняется при выборе должности
+          <div class="row g-3">
+            <div class="col-md-5 mb-3">
+              <label class="form-label">{{ t('teachers.form.rate') }} *</label>
+              <select name="rate" id="rate-select" class="form-select" required>
+                {% for r in rates %}
+                <option value="{{ r }}"
+                  {% if (teacher and teacher.rate == r) or (not teacher and r == default_rate) %}selected{% endif %}>
+                  {{ '%g'|format(r) }}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text" style="color:var(--clr-muted);font-size:11px;margin-top:4px">
+                {{ t('teachers.form.rate_help') }}
+              </div>
+            </div>
+            <div class="col-md-7 mb-3">
+              <label class="form-label">{{ t('teachers.form.max') }} *</label>
+              <input type="number" name="max_workload" id="max-workload" class="form-control"
+                     min="0" max="200" step="0.5"
+                     value="{{ teacher.max_workload if teacher else 30 }}" required>
+              <div class="form-text" style="color:var(--clr-muted);font-size:11px;margin-top:4px">
+                {{ t('teachers.form.help') }}
+              </div>
             </div>
           </div>
 
           <div class="mb-4">
-            <label class="form-label">Email</label>
+            <label class="form-label">{{ t('teachers.form.email') }}</label>
             <input type="email" name="email" class="form-control"
                    placeholder="ivanov@university.edu"
                    value="{{ teacher.email if teacher else '' }}">
@@ -61,10 +85,10 @@
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-lg me-1"></i>
-              {{ 'Сохранить изменения' if action == 'edit' else 'Добавить преподавателя' }}
+              {{ t('common.save_changes') if action == 'edit' else t('teachers.add') }}
             </button>
             <a href="{{ url_for('teachers_list') }}" class="btn btn-outline-secondary">
-              Отмена
+              {{ t('common.cancel') }}
             </a>
           </div>
         </form>
@@ -75,34 +99,29 @@
   <!-- Подсказка -->
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header"><i class="bi bi-info-circle me-2"></i>Нормы нагрузки</div>
+      <div class="card-header"><i class="bi bi-info-circle me-2"></i>{{ t('teachers.norms.title') }}</div>
       <div class="card-body">
         <table class="table table-sm mb-0">
-          <thead><tr><th>Должность</th><th>Макс. часов/год</th></tr></thead>
+          <thead><tr><th>{{ t('teachers.norms.position') }}</th><th>{{ t('teachers.norms.per_rate') }}</th></tr></thead>
           <tbody>
-            {% for pos, hrs in position_workloads.items() %}
+            {% for pos, cr in position_workloads.items() %}
             <tr>
-              <td>{{ pos }}</td>
-              <td><span class="hours-chip">{{ hrs }}</span></td>
+              <td>
+                {{ position_label(pos) }}
+                {% if pos in supervisor_only %}
+                  <span class="badge text-bg-warning" style="font-size:10px;margin-left:4px">{{ t('teachers.norms.supervisor_badge') }}</span>
+                {% endif %}
+              </td>
+              <td><span class="hours-chip">{{ cr }}</span></td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        <div class="mt-3" style="font-size:12px;color:var(--clr-muted);line-height:1.55">
+          {{ t('teachers.norms.note') }}
+        </div>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Автоматически подставляем рекомендуемую нагрузку при выборе должности
-const workloads = {{ position_workloads | tojson }};
-document.getElementById('position-select').addEventListener('change', function() {
-  const pos = this.value;
-  if (workloads[pos]) {
-    document.getElementById('max-workload').value = workloads[pos];
-  }
-});
-</script>
 {% endblock %}

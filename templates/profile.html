@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Профиль{% endblock %}
+{% block title %}{{ t('profile.title') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="page-title">Мой профиль</div>
-  <div class="page-subtitle">Персональные настройки аккаунта</div>
+  <div class="page-title">{{ t('profile.heading') }}</div>
+  <div class="page-subtitle">{{ t('profile.subtitle') }}</div>
 </div>
 
 <div class="row g-4">
@@ -29,19 +29,19 @@
           <span style="background:rgba(242,79,79,0.12);color:var(--clr-red);
                        border:1px solid rgba(242,79,79,0.25);
                        padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500">
-            <i class="bi bi-shield-fill me-1"></i>Администратор
+            <i class="bi bi-shield-fill me-1"></i>{{ t('role.admin') }}
           </span>
         {% elif current_user.role == 'editor' %}
           <span style="background:rgba(79,142,247,0.12);color:var(--clr-accent);
                        border:1px solid rgba(79,142,247,0.25);
                        padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500">
-            <i class="bi bi-pencil-square me-1"></i>Редактор
+            <i class="bi bi-pencil-square me-1"></i>{{ t('role.editor') }}
           </span>
         {% else %}
           <span style="background:rgba(62,207,142,0.12);color:var(--clr-green);
                        border:1px solid rgba(62,207,142,0.25);
                        padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500">
-            <i class="bi bi-eye me-1"></i>Наблюдатель
+            <i class="bi bi-eye me-1"></i>{{ t('role.viewer') }}
           </span>
         {% endif %}
       </div>
@@ -51,51 +51,33 @@
   <!-- Смена пароля -->
   <div class="col-md-8">
     <div class="card">
-      <div class="card-header"><i class="bi bi-lock me-2"></i>Изменить пароль</div>
+      <div class="card-header"><i class="bi bi-lock me-2"></i>{{ t('profile.change_password') }}</div>
       <div class="card-body">
         <form method="post">
           <div class="mb-3">
-            <label class="form-label">Текущий пароль *</label>
+            <label class="form-label">{{ t('profile.current_pwd') }} *</label>
             <input type="password" name="old_password" class="form-control"
-                   placeholder="Введите текущий пароль" required>
+                   placeholder="{{ t('profile.current_pwd_placeholder') }}" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Новый пароль * (минимум 6 символов)</label>
+            <label class="form-label">{{ t('profile.new_pwd') }} *</label>
             <input type="password" name="new_password" id="new-pwd" class="form-control"
-                   placeholder="Новый пароль" required minlength="6">
+                   placeholder="{{ t('profile.new_pwd_placeholder') }}" required minlength="6">
           </div>
           <div class="mb-4">
-            <label class="form-label">Подтвердите новый пароль *</label>
+            <label class="form-label">{{ t('profile.confirm_pwd') }} *</label>
             <input type="password" name="confirm_password" id="confirm-pwd" class="form-control"
-                   placeholder="Повторите новый пароль" required minlength="6"
-                   oninput="checkMatch()">
-            <div id="match-hint" style="font-size:11px;margin-top:4px;display:none"></div>
+                   placeholder="{{ t('profile.confirm_pwd_placeholder') }}" required minlength="6">
+            <div id="match-hint" style="font-size:11px;margin-top:4px;display:none"
+                 data-match="{{ t('js.passwords_match') }}"
+                 data-mismatch="{{ t('js.passwords_no_match') }}"></div>
           </div>
           <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i>Сохранить новый пароль
+            <i class="bi bi-check-lg me-1"></i>{{ t('profile.save_pwd') }}
           </button>
         </form>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-function checkMatch() {
-  const np = document.getElementById('new-pwd').value;
-  const cp = document.getElementById('confirm-pwd').value;
-  const hint = document.getElementById('match-hint');
-  if (cp.length === 0) { hint.style.display = 'none'; return; }
-  hint.style.display = 'block';
-  if (np === cp) {
-    hint.textContent = '✓ Пароли совпадают';
-    hint.style.color = 'var(--clr-green)';
-  } else {
-    hint.textContent = '✗ Пароли не совпадают';
-    hint.style.color = 'var(--clr-red)';
-  }
-}
-</script>
 {% endblock %}

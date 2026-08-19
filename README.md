@@ -1,84 +1,85 @@
-# AIkafedra
+# AIkafedra — cybersecurity edition
 
-**Веб-приложение для автоматизации работы кафедры искусственного интеллекта.**
+Ветка `cybersecurity` — версия приложения с усиленной защитой: CSRF, rate-limit, аудит входов, безопасные cookie, security-заголовки, требование смены дефолтного пароля.
 
-Помогает заведующему и учебно-методическому отделу распределять нагрузку преподавателей, вести учёт дисциплин и получать быстрые ответы по данным кафедры с помощью встроенного ИИ.
+Основной функционал — тот же (учёт преподавателей / дисциплин / нагрузки, отчёты, ИИ-ассистент, RU/KZ), но security-контур переработан.
 
 ---
 
-## Зачем это нужно
+## Что изменилось (security changelog)
 
-Раньше нагрузка кафедры считалась вручную в Excel: длинно, с ошибками, без контроля лимитов и без единого источника правды. `AIkafedra` заменяет эту рутину:
+| # | Улучшение | Файл / компонент |
+|---|-----------|------------------|
+| 1 | **CSRF-защита** на всех POST-формах (Flask-WTF `CSRFProtect`) | `main.py`, все `templates/*.html` |
+| 2 | **Rate-limit** на `/login` — 5 попыток / 5 минут на IP (Flask-Limiter) | `main.py` |
+| 3 | **Security-заголовки** — CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy, Permissions-Policy, HSTS (при HTTPS) | `security.py` |
+| 4 | **Безопасные cookie** — `HttpOnly`, `SameSite=Lax`, `Secure` (в проде) | `config.py`, `main.py` |
+| 5 | **Session fixation** — сессия сбрасывается при логине | `main.py` |
+| 6 | **Open-redirect** — `?next=` валидируется, разрешён только тот же хост | `security.py: safe_next_url` |
+| 7 | **Политика паролей** — минимум 10 символов, буквы + цифры (настраивается) | `security.py`, `auth.py` |
+| 8 | **Генерация admin-пароля** — в проде создаётся криптостойкий пароль (не `admin1234`) | `auth.py: ensure_default_admin` |
+| 9 | **Обязательная смена пароля** — после первого входа с дефолтным паролем | `auth.py`, `main.py: _enforce_password_change` |
+| 10 | **Аудит входов** — таблица `login_attempts` (username, IP, success, UA, время) | `database.py`, `auth.py` |
+| 11 | **`DEBUG=False` по умолчанию**, `SECRET_KEY` обязателен в проде | `config.py`, `main.py` |
+| 12 | **`/logout` только POST** — защита от logout-CSRF через `<img src=/logout>` | `main.py`, `base.html` |
+| 13 | **Лимит тела запроса** — `MAX_CONTENT_LENGTH=16 MiB` | `main.py` |
 
-- нагрузка автоматически считается в **кредитах** и проверяется на соответствие норме должности;
-- перегрузки и недогрузки видно сразу — не в конце семестра;
-- ИИ-ассистент отвечает на вопросы вида *«сколько кредитов у Иванова во 2 семестре?»* прямо по актуальной базе;
-- интерфейс на русском и казахском.
+## Модель угроз, которые закрыты
 
-## Основные модули
+- **CSRF** — злоумышленник не может подделать POST от имени залогиненного пользователя
+- **Brute-force** входа — ограничен по IP
+- **Clickjacking** — `X-Frame-Options: DENY`
+- **MIME-sniffing XSS** — `X-Content-Type-Options: nosniff`
+- **Cross-site cookie leakage** — `SameSite=Lax`, `Secure` (в проде)
+- **Session fixation** — id сессии сбрасывается на входе
+- **Open redirect** через `next=` — блокируется валидатором
+- **Утечка дефолтного пароля** — в проде генерируется случайный, с обязательной сменой
+- **Отсутствие следов** — попытки входа логируются в БД
 
-- **Преподаватели** — карточка, должность, ставка, персональный лимит нагрузки
-- **Дисциплины** — справочник предметов, посев из учебного плана (Excel → JSON)
-- **Нагрузка** — распределение по видам занятий (лекции, практика, лабораторные, научное руководство) и семестрам
-- **Отчёты** — сводки по перегрузкам/недогрузкам, экспорт в Excel
-- **ИИ-ассистент** — Groq API, работает с текущими данными БД
-- **Роли и доступ** — администратор и преподаватель, вход по логину/паролю
-
-## Технологии
-
-Python 3.10+, Flask 3, Flask-Login, SQLite, Jinja2, Groq API, openpyxl, gunicorn.
-
-## Быстрый старт
-
-```bash
-git clone https://github.com/MirasDavletaly/AIkafedra.git
-cd AIkafedra
-python -m venv .venv && .venv\Scripts\activate    # Windows
-pip install -r requirements.txt
-```
-
-Создайте `.env`:
+## Переменные окружения
 
 ```dotenv
-SECRET_KEY=change-me
+# --- обязательно в проде ---
+SECRET_KEY=<длинная случайная строка>
+FLASK_DEBUG=0
+
+# --- рекомендуется ---
+PASSWORD_MIN_LENGTH=10
+LOGIN_RATE_LIMIT=5 per 5 minutes
+PERMANENT_SESSION_LIFETIME_DAYS=7
+ALLOW_DEFAULT_ADMIN_PASSWORD=0   # 1 — разрешить admin/admin1234 (только DEV)
+
+# --- ИИ ---
 GROQ_API_KEY=gsk_...
 GROQ_MODEL=llama-3.3-70b-versatile
-ACADEMIC_YEAR_DEFAULT=2025-2026
 ```
 
-Запуск:
+Сгенерировать `SECRET_KEY`:
 
 ```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+## Установка
+
+```bash
+git clone -b cybersecurity https://github.com/MirasDavletaly/AIkafedra.git
+cd AIkafedra
+python -m venv .venv && .venv\Scripts\activate
+pip install -r requirements.txt
 python main.py
 ```
 
-Открыть в браузере: `http://127.0.0.1:5000`. Первичный вход: `admin / admin`.
+**Первый запуск в проде:** в логе будет напечатан пароль сгенерированного администратора — сохраните его, повторно он не выводится. При первом входе система потребует его сменить.
 
-## Посев данных
+## Что осталось на будущее
 
-```bash
-python scripts/extract_disciplines_from_xls.py   # Excel учебного плана → JSON
-python scripts/seed_disciplines.py               # JSON → SQLite
-```
+- Переход с `'unsafe-inline'` в CSP на nonce-based (в шаблонах есть 2 inline `<script>`)
+- Двухфакторная аутентификация (TOTP)
+- Хранилище rate-limit — Redis вместо памяти (для многопроцессной работы)
+- Ротация паролей / срок действия
+- Экспорт `login_attempts` в SIEM
 
-## Структура
+## Основной функционал
 
-| Файл / папка | Назначение |
-|--------------|------------|
-| `main.py` | Flask-приложение и маршруты |
-| `config.py` | Настройки, лимиты, справочники должностей |
-| `database.py` | Схема БД и миграции |
-| `teachers.py`, `subjects.py`, `workload.py` | CRUD и бизнес-логика |
-| `reports.py` | Отчёты и экспорт в Excel |
-| `ai_engine.py` | ИИ-ассистент (Groq) |
-| `i18n.py` | Локализация RU / KZ |
-| `templates/`, `static/` | Интерфейс |
-| `scripts/` | Импорт учебного плана |
-
-## Нормативная база
-
-Нагрузка рассчитывается по **П ЕНУ K.V.14-22 (Приложение 3)**: 1 кредит = 15 академических часов; базовая норма ППС — 30 кредитов на 1 ставку.
-
-## Статус
-
-Активно развивается. Используется на кафедре искусственного интеллекта в качестве внутреннего инструмента.
+Не изменился. См. предыдущие README на ветках `main` / `TEST`.

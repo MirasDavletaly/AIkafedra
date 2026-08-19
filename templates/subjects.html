@@ -57,6 +57,7 @@
               </a>
               <form method="post" action="{{ url_for('subject_delete', sid=s['id']) }}"
                     onsubmit="return confirm('{{ t('subjects.confirm_delete', name=s['name']) }}')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm" style="color:var(--clr-red);border-color:var(--clr-border)">
                   <i class="bi bi-trash"></i>
                 </button>

@@ -49,22 +49,54 @@ def init_db():
     """)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            username      TEXT    NOT NULL UNIQUE,       -- Логин (строчные)
-            password_hash TEXT    NOT NULL,              -- Хэш пароля (werkzeug)
-            full_name     TEXT    NOT NULL,              -- ФИО / отображаемое имя
-            role          TEXT    NOT NULL DEFAULT 'viewer', -- admin|editor|viewer
-            is_active     INTEGER NOT NULL DEFAULT 1,    -- 1=активен, 0=заблокирован
-            created_at    TEXT    DEFAULT (datetime('now'))
+            id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+            username               TEXT    NOT NULL UNIQUE,       -- Логин (строчные)
+            password_hash          TEXT    NOT NULL,              -- Хэш пароля (werkzeug)
+            full_name              TEXT    NOT NULL,              -- ФИО / отображаемое имя
+            role                   TEXT    NOT NULL DEFAULT 'viewer', -- admin|editor|viewer
+            is_active              INTEGER NOT NULL DEFAULT 1,    -- 1=активен, 0=заблокирован
+            must_change_password   INTEGER NOT NULL DEFAULT 0,    -- 1 = требовать смены пароля при следующем входе
+            created_at             TEXT    DEFAULT (datetime('now'))
         )
     """)
+    # Аудит: все попытки входа (успех/провал)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS login_attempts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            username   TEXT    NOT NULL,
+            ip         TEXT    NOT NULL,
+            success    INTEGER NOT NULL,          -- 1 = успех, 0 = провал
+            user_agent TEXT,
+            created_at TEXT    DEFAULT (datetime('now'))
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_login_attempts_created_at "
+        "ON login_attempts(created_at)"
+    )
 
     conn.commit()
     conn.close()
+    _migrate_users_must_change_password()
     _migrate_subjects_credits()
     _migrate_hours_to_credits()
     _migrate_teachers_rate()
     print("[DB] База данных инициализирована успешно.")
+
+
+def _migrate_users_must_change_password():
+    """Добавляет столбец must_change_password для существующих БД."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("PRAGMA table_info(users)")
+    cols = {row[1] for row in cur.fetchall()}
+    if "must_change_password" not in cols:
+        cur.execute(
+            "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
+        print("[DB] Миграция: добавлен столбец users.must_change_password")
+    conn.close()
 
 
 def _migrate_teachers_rate():

@@ -16,6 +16,7 @@
   </div>
   {% if current_user.can_edit() %}
   <form method="post" action="{{ url_for('ai_retrain') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-clockwise me-1"></i>{{ t('ai.retrain') }}
     </button>
